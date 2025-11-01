@@ -166,3 +166,6 @@ class Envelope:
     parent_id: Optional[str] = None
     correlation_id: Optional[str] = None
     annotations: Optional[Mapping[str, str]] = None
+    # OpenTelemetry-compatible identifiers (hex)
+    trace_id: Optional[str] = None
+    span_id: Optional[str] = None

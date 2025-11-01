@@ -6,16 +6,21 @@ This directory hosts the canonical protocol buffer schemas for PAP v1. The initi
 - `pap/v1/pap.proto`: Core transport schema.
 
 ## Tooling
-1. Install the protobuf compiler (`protoc`) 3.21+.
-2. Install language-specific plugins as SDKs come online (`protoc-gen-go`, `protoc-gen-ts`, etc.).
-3. Generate code, for example:
+1. Optional: Install `buf` and use the included config (`proto/buf.yaml`) to lint and format:
+   ```bash
+   make proto-lint
+   make proto-format
+   ```
+2. Install the protobuf compiler (`protoc`) 3.21+.
+3. Install language-specific plugins as SDKs come online (`protoc-gen-go`, `protoc-gen-ts`, etc.).
+4. Generate code, for example:
    ```bash
    protoc --proto_path=. \
      --go_out=../sdk/go --go_opt=paths=source_relative \
      --python_out=../sdk/python \
      pap/v1/pap.proto
    ```
-4. Ensure generated code is committed to language-specific subdirectories under `sdk/`.
+5. Ensure generated code is committed to language-specific subdirectories under `sdk/`.
 
 ## Contribution Guidelines
 - Keep wire schemas backward compatible within `v1`.

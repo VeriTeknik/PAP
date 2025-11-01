@@ -101,6 +101,41 @@ sequenceDiagram
 - `registry/`: Identity, policy, and capability management plans.
 - `ops/`: Operational runbooks, heartbeat thresholds, and SLO tracking.
 
+## Heartbeat Semantics
+
+- Heartbeat is a liveness-only signal. It must never be used as a readiness gate for accepting work. Readiness should be determined by separate health checks or internal state transitions.
+- Default interval: 10s (configurable). Unhealthy threshold: 3 consecutive misses, triggering `AGENT_UNHEALTHY`.
+- Resource gauges (CPU, memory, custom) belong in heartbeat; business and performance metrics should be emitted separately as `event.metrics`.
+
+## DNS Topology
+
+- Base zone: `plugged.in`
+- Proxy edge: `mcp.plugged.in` (TLS termination, routing, rate limits)
+- Agent namespace: `{agent}.{cluster}.a.plugged.in` (delegated `a.plugged.in` subzone)
+- Delegation model:
+  - `mcp.plugged.in` → Station-owned LB/frontdoor
+  - `a.plugged.in` → Cluster-level DNS, aligned with certificate SANs and DNSSEC
+
+## Error Codes (Summary)
+
+| Enum | HTTP | Description |
+|------|------|-------------|
+| `OK` | 200 | Request completed successfully. |
+| `ACCEPTED` | 202 | Task accepted; processing async. |
+| `BAD_REQUEST` | 400 | Invalid message or arguments. |
+| `UNAUTHORIZED` | 401 | Invalid or missing credentials. |
+| `FORBIDDEN` | 403 | Action not permitted. |
+| `NOT_FOUND` | 404 | Target agent/action not found. |
+| `TIMEOUT` | 408 | Job or agent timeout. |
+| `CONFLICT` | 409 | Version or concurrency conflict. |
+| `RATE_LIMITED` | 429 | Too many requests. |
+| `AGENT_UNHEALTHY` | 480 | Heartbeat anomaly detected. |
+| `AGENT_BUSY` | 481 | Agent overloaded; retry later. |
+| `DEPENDENCY_FAILED` | 482 | Downstream call failed. |
+| `INTERNAL_ERROR` | 500 | Agent internal fault. |
+| `PROXY_ERROR` | 502 | Routing/connection issue. |
+| `VERSION_UNSUPPORTED` | 505 | Protocol version mismatch. |
+
 ## Message Types
 
 PAP defines four canonical message families for all communication:
@@ -140,14 +175,21 @@ graph TB
 ## Getting Started
 
 1. Read `docs/overview.md` to understand the protocol vision.
-2. Dive into `docs/rfc/pap-rfc-001.md` for transport-level requirements.
+2. Dive into `docs/rfc/pap-rfc-001.md` for transport-level requirements, or the rev2.1-aligned spec at `docs/rfc/pap-rfc-001-rev2.1.md`.
 3. Generate language stubs from `proto/pap/v1/pap.proto` once SDK work begins.
 
+### Observability & Tracing
+
+- All messages should carry OpenTelemetry identifiers (`trace_id`, `span_id`) in the envelope for end-to-end correlation through the Proxy and Station.
+- The Proxy is responsible for emitting traces with these identifiers and linking to upstream/downstream spans.
+
 ## Status
-This repository contains the initial scaffolding for PAP v1.0. Specifications are in draft form and subject to change as infrastructure and SDK work progress.
+This repository targets PAP-RFC-001 rev2.1 alignment. Specifications and schemas may evolve; see `VERSION` and `CHANGELOG.md` for updates.
 
 ## Contributing
 Please open issues or drafts for changes to specs, schemas, or operational playbooks. Align proposal discussions with the RFC structure documented under `docs/rfc/`.
+
+See `CODE_OF_CONDUCT.md` and `SECURITY.md` for governance and vulnerability reporting.
 
 ## License
 PAP is released under the Apache 2.0 License. See `LICENSE` for the full text and patent grant.

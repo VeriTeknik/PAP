@@ -1,0 +1,13 @@
+version: v1
+name: buf.build/pluggedin/pap
+deps: []
+breaking:
+  use:
+    - FILE
+lint:
+  use:
+    - DEFAULT
+build:
+  roots:
+    - .
+

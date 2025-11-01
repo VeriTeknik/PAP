@@ -19,6 +19,9 @@ message MessageEnvelope {
   AuthContext auth = 6;
   map<string, string> annotations = 7;
   MessageBody body = 8;
+  // OpenTelemetry-compatible identifiers for end-to-end tracing
+  string trace_id = 9; // 16-byte hex string
+  string span_id = 10; // 8-byte hex string
 }
 
 message AgentIdentity {

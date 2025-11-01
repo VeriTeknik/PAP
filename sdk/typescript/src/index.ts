@@ -30,6 +30,9 @@ export interface PapEnvelope<T extends PapMessage> {
   auth: AuthContext;
   annotations?: Record<string, string>;
   body: T;
+  // OpenTelemetry-compatible identifiers (hex strings)
+  traceId?: string;
+  spanId?: string;
 }
 
 export type PapMessage =

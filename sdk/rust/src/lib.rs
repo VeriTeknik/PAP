@@ -33,6 +33,9 @@ pub struct Envelope {
     pub auth: AuthContext,
     pub annotations: BTreeMap<String, String>,
     pub body: MessageBody,
+    /// OpenTelemetry-compatible identifiers (hex)
+    pub trace_id: Option<String>,
+    pub span_id: Option<String>,
 }
 
 /// Enumeration of supported message families.
@@ -58,6 +61,8 @@ impl Envelope {
             auth,
             annotations: BTreeMap::new(),
             body,
+            trace_id: None,
+            span_id: None,
         }
     }
 }

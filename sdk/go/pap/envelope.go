@@ -8,14 +8,17 @@ import (
 
 // Envelope wraps every PAP message exchanged between Station and Satellite.
 type Envelope struct {
-	MessageID     string
-	ParentID      string
-	CorrelationID string
-	SentAt        time.Time
-	Sender        AgentIdentity
-	Auth          AuthContext
-	Annotations   map[string]string
-	Body          MessageBody
+    MessageID     string
+    ParentID      string
+    CorrelationID string
+    SentAt        time.Time
+    Sender        AgentIdentity
+    Auth          AuthContext
+    Annotations   map[string]string
+    Body          MessageBody
+    // OpenTelemetry-compatible identifiers
+    TraceID string
+    SpanID  string
 }
 
 // AgentIdentity describes the logical and infrastructure placement of an agent.
