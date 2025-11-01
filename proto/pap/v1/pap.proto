@@ -1,0 +1,209 @@
+syntax = "proto3";
+
+package pap.v1;
+
+option go_package = "github.com/pluggedin/pap/proto/pap/v1;papv1";
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+// PAP defines a uniform envelope around commands, responses, telemetry,
+// and lifecycle directives exchanged between the Station and Satellites.
+
+message MessageEnvelope {
+  string message_id = 1;
+  string parent_id = 2;
+  string correlation_id = 3;
+  google.protobuf.Timestamp sent_at = 4;
+  AgentIdentity sender = 5;
+  AuthContext auth = 6;
+  map<string, string> annotations = 7;
+  MessageBody body = 8;
+}
+
+message AgentIdentity {
+  string agent = 1;    // e.g. "focus-sat-01"
+  string cluster = 2;  // e.g. "orbital-a"
+  string version = 3;  // protocol implementation version
+  string instance = 4; // unique process identifier within the agent
+}
+
+message AuthContext {
+  bytes signature = 1;      // Signature over canonicalized envelope
+  string algorithm = 2;     // e.g. "ed25519"
+  bytes payload_hash = 3;   // SHA-256 hash of MessageBody
+  string nonce = 4;         // Replay protection token
+  google.protobuf.Timestamp issued_at = 5;
+}
+
+message MessageBody {
+  oneof payload {
+    Invoke invoke = 1;
+    Response response = 2;
+    Event event = 3;
+    Error error = 4;
+    ControlDirective control = 5;
+    HandshakeAck handshake_ack = 6;
+  }
+}
+
+message Invoke {
+  Target target = 1;
+  string method = 2;
+  google.protobuf.Struct arguments = 3;
+  google.protobuf.Timestamp deadline = 4;
+  bool expect_reply = 5;
+  map<string, string> metadata = 6;
+}
+
+message Target {
+  string agent = 1;      // Destination agent DNS label
+  string namespace = 2;  // Logical namespace or capability scope
+  string capability = 3; // Requested capability identifier
+}
+
+message Response {
+  ErrorCode status = 1;
+  repeated Output outputs = 2;
+  map<string, string> metadata = 3;
+  bool is_final = 4;
+}
+
+message Output {
+  string content_type = 1;
+  bytes data = 2;
+  google.protobuf.Struct annotations = 3;
+}
+
+message Event {
+  EventType type = 1;
+  google.protobuf.Struct context = 2;
+  oneof detail {
+    Heartbeat heartbeat = 10;
+    Log log = 11;
+    Alert alert = 12;
+    MetricBatch metrics = 13;
+  }
+}
+
+enum EventType {
+  EVENT_TYPE_UNSPECIFIED = 0;
+  EVENT_TYPE_HEARTBEAT = 1;
+  EVENT_TYPE_LOG = 2;
+  EVENT_TYPE_ALERT = 3;
+  EVENT_TYPE_METRIC = 4;
+}
+
+message Heartbeat {
+  double cpu_percent = 1;
+  double memory_mb = 2;
+  double uptime_seconds = 3;
+  uint32 active_jobs = 4;
+  map<string, double> gauges = 5; // Custom health metrics
+}
+
+message Log {
+  string level = 1; // e.g. "INFO", "WARN"
+  string message = 2;
+  map<string, google.protobuf.Value> fields = 3;
+}
+
+message Alert {
+  string title = 1;
+  string description = 2;
+  Severity severity = 3;
+  map<string, google.protobuf.Value> labels = 4;
+}
+
+message MetricBatch {
+  repeated MetricPoint points = 1;
+}
+
+message MetricPoint {
+  string name = 1;
+  double value = 2;
+  google.protobuf.Timestamp observed_at = 3;
+  map<string, string> attributes = 4;
+}
+
+enum Severity {
+  SEVERITY_UNSPECIFIED = 0;
+  SEVERITY_INFO = 1;
+  SEVERITY_WARNING = 2;
+  SEVERITY_CRITICAL = 3;
+}
+
+message Error {
+  ErrorCode code = 1;
+  string message = 2;
+  bool recoverable = 3;
+  map<string, google.protobuf.Value> details = 4;
+}
+
+message ControlDirective {
+  ControlType type = 1;
+  google.protobuf.Struct arguments = 2;
+  google.protobuf.Timestamp enforce_at = 3;
+}
+
+enum ControlType {
+  CONTROL_TYPE_UNSPECIFIED = 0;
+  CONTROL_TYPE_TERMINATE = 1;
+  CONTROL_TYPE_FORCE_KILL = 2;
+  CONTROL_TYPE_PAUSE = 3;
+  CONTROL_TYPE_RESUME = 4;
+  CONTROL_TYPE_PING = 5;
+}
+
+enum ErrorCode {
+  ERROR_CODE_UNSPECIFIED = 0;
+  OK = 1;
+  ACCEPTED = 2;
+  BAD_REQUEST = 3;
+  UNAUTHORIZED = 4;
+  FORBIDDEN = 5;
+  NOT_FOUND = 6;
+  TIMEOUT = 7;
+  CONFLICT = 8;
+  RATE_LIMITED = 9;
+  AGENT_UNHEALTHY = 10;
+  AGENT_BUSY = 11;
+  DEPENDENCY_FAILED = 12;
+  INTERNAL_ERROR = 13;
+  PROXY_ERROR = 14;
+  VERSION_UNSUPPORTED = 15;
+}
+
+message HandshakeRequest {
+  string protocol_version = 1;
+  string agent_name = 2;
+  string cluster = 3;
+  repeated Capability capabilities = 4;
+  bytes signing_public_key = 5;
+  string token = 6;
+}
+
+message Capability {
+  string name = 1;                // Capability identifier
+  map<string, string> config = 2; // Capability-specific configuration
+}
+
+message HandshakeResponse {
+  string protocol_version = 1;
+  AgentIdentity identity = 2;
+  repeated Capability capabilities = 3;
+  CertificateBundle certificate = 4;
+  google.protobuf.Timestamp issued_at = 5;
+  google.protobuf.Timestamp expires_at = 6;
+  bytes station_signature = 7; // Signature over the response
+}
+
+message CertificateBundle {
+  string certificate_pem = 1;
+  string ca_certificate_pem = 2;
+}
+
+message HandshakeAck {
+  bool accepted = 1;
+  string reason = 2;
+}
