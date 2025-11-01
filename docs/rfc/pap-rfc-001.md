@@ -198,49 +198,50 @@ Stations MUST reject handshakes lacking required capabilities for their policy d
 ### Error Handling Flow
 
 ```mermaid
-flowchart TD
-    Error[Error Occurred] --> Code{Error Code?}
+graph LR
+    Request[Incoming Request]
 
-    Code -->|400-403<br/>BAD_REQUEST<br/>UNAUTHORIZED<br/>FORBIDDEN| NoRetry[❌ Don't Retry]
-    NoRetry --> Log1[Log Error]
-    Log1 --> Notify[Notify User]
+    Request --> Auth{Authenticated?}
+    Auth -->|No| 401[401 UNAUTHORIZED]
+    Auth -->|Yes| Perm{Permitted?}
 
-    Code -->|408 TIMEOUT| Retry1{Retry<br/>Count < 3?}
-    Retry1 -->|Yes| Backoff1[Exponential Backoff]
-    Backoff1 --> Retry[🔄 Retry Request]
-    Retry1 -->|No| Fail[Mark as Failed]
+    Perm -->|No| 403[403 FORBIDDEN]
+    Perm -->|Yes| Valid{Valid Args?}
 
-    Code -->|429 RATE_LIMITED| Wait[Wait retry_after_ms]
-    Wait --> Retry
+    Valid -->|No| 400[400 BAD_REQUEST]
+    Valid -->|Yes| Found{Agent Found?}
 
-    Code -->|480 AGENT_UNHEALTHY| CheckHealth[Check Agent Health]
-    CheckHealth --> Restart{Can Restart?}
-    Restart -->|Yes| RestartAgent[Restart Agent]
-    Restart -->|No| Reroute[Route to Backup Agent]
+    Found -->|No| 404[404 NOT_FOUND]
+    Found -->|Yes| Health{Healthy?}
 
-    Code -->|481 AGENT_BUSY| LoadBalance[Load Balance to<br/>Another Instance]
+    Health -->|No| 480[480 AGENT_UNHEALTHY]
+    Health -->|Yes| Rate{Rate OK?}
 
-    Code -->|482 DEPENDENCY_FAILED| CheckDep[Check Dependency]
-    CheckDep --> DepOK{Dep Available?}
-    DepOK -->|Yes| Retry
-    DepOK -->|No| Circuit[Open Circuit Breaker]
+    Rate -->|No| 429[429 RATE_LIMITED]
+    Rate -->|Yes| Busy{Available?}
 
-    Code -->|500-503<br/>INTERNAL_ERROR<br/>PROXY_ERROR| Retry2{Retry<br/>Count < 3?}
-    Retry2 -->|Yes| Backoff2[Exponential Backoff]
-    Backoff2 --> Retry
-    Retry2 -->|No| Fail
+    Busy -->|No| 481[481 AGENT_BUSY]
+    Busy -->|Yes| Exec[Execute]
 
-    Code -->|505 VERSION_UNSUPPORTED| Upgrade[Upgrade Protocol<br/>Version]
+    Exec --> Success{Success?}
+    Success -->|Yes| 200[200 OK]
+    Success -->|Async| 202[202 ACCEPTED]
+    Success -->|Timeout| 408[408 TIMEOUT]
+    Success -->|Conflict| 409[409 CONFLICT]
+    Success -->|Error| 500[500 INTERNAL_ERROR]
 
-    RestartAgent --> Monitor[Monitor Recovery]
-    Reroute --> Monitor
-    LoadBalance --> Monitor
-    Fail --> Alert[Alert Operations]
-
-    style NoRetry fill:#ffccbc
-    style Retry fill:#c8e6c9
-    style Fail fill:#ff8a80
-    style Monitor fill:#b2dfdb
+    style 401 fill:#dc2626
+    style 403 fill:#dc2626
+    style 400 fill:#ea580c
+    style 404 fill:#ea580c
+    style 480 fill:#dc2626
+    style 429 fill:#f59e0b
+    style 481 fill:#f59e0b
+    style 408 fill:#f59e0b
+    style 409 fill:#f59e0b
+    style 500 fill:#dc2626
+    style 200 fill:#16a34a
+    style 202 fill:#16a34a
 ```
 
 ## 11. Security Considerations
@@ -248,41 +249,43 @@ flowchart TD
 PAP implements defense-in-depth security across multiple layers:
 
 ```mermaid
-graph TB
-    subgraph Transport["🔒 Transport Layer"]
-        TLS[TLS 1.3+<br/>mTLS with<br/>client certs]
-        DNS[DNSSEC<br/>for identity<br/>verification]
+graph TD
+    subgraph Transport["🔒 Transport Security"]
+        TLS[mTLS Encryption<br/>Wildcard Certs]
     end
 
-    subgraph Application["🔐 Application Layer"]
-        JWT[JWT onboarding<br/>token]
-        Sig[Ed25519<br/>message<br/>signatures]
-        CRC[SHA-256<br/>checksums]
-        Nonce[Anti-replay<br/>nonces]
+    subgraph Identity["🆔 Identity Layer"]
+        DNS[DNS-Based Addressing<br/>{agent}.{cluster}.a.plugged.in]
+        DNSSEC[DNSSEC Verification]
+        JWT[JWT Onboarding Token]
     end
 
-    subgraph Audit["📝 Audit Layer"]
-        Mem[Memory Service<br/>event storage]
-        Trace[OpenTelemetry<br/>distributed<br/>tracing]
-        Ver[Versioned<br/>history]
+    subgraph Integrity["✍️ Message Integrity"]
+        Sig[Ed25519 Signatures]
+        CRC[CRC Hash Verification]
+        Replay[Replay Protection<br/>Timestamp + Nonce]
     end
 
-    Message[PAP Message] --> TLS
+    subgraph Audit["📋 Auditability"]
+        Log[Event Logging]
+        Trace[OpenTelemetry<br/>trace_id + span_id]
+        Mem[Memory Service<br/>State Versioning]
+    end
+
     TLS --> DNS
-    DNS --> JWT
+    DNS --> DNSSEC
+    DNSSEC --> JWT
     JWT --> Sig
     Sig --> CRC
-    CRC --> Nonce
-    Nonce --> Process[Process Message]
+    CRC --> Replay
+    Replay --> Log
+    Log --> Trace
+    Trace --> Mem
 
-    Process --> Mem
-    Process --> Trace
-    Process --> Ver
-
-    style TLS fill:#bbdefb
-    style JWT fill:#c5cae9
-    style Sig fill:#d1c4e9
-    style Mem fill:#f8bbd0
+    style Transport fill:#1e3a8a,color:#fff
+    style Identity fill:#064e3b,color:#fff
+    style Integrity fill:#581c87,color:#fff
+    style Audit fill:#713f12,color:#fff
 ```
 
 **Requirements:**

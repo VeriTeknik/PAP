@@ -31,6 +31,40 @@ PAP delivers a secure, auditable control channel between the Plugged.in Station 
 
 ## Agent Lifecycle
 
+### Lifecycle State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> Invited: Invite Token Issued
+    Invited --> Authenticating: Request Registration
+    Authenticating --> Provisioned: Certificate + DNS ID
+    Provisioned --> Active: First Heartbeat
+
+    Active --> Idle: No Active Tasks
+    Idle --> Active: New Task
+    Active --> Busy: High Load
+    Busy --> Active: Load Normalized
+
+    Active --> Unhealthy: Heartbeat Anomaly
+    Idle --> Unhealthy: Heartbeat Anomaly
+    Busy --> Unhealthy: Resource Abuse
+
+    Unhealthy --> Terminating: Graceful Shutdown
+    Active --> Terminating: User Request
+    Idle --> Terminating: User Request
+
+    Unhealthy --> ForceKilled: Emergency Kill
+    Terminating --> Terminated: Clean Exit
+    ForceKilled --> Terminated: -9 Signal
+
+    Terminated --> [*]
+
+    Active --> Transferring: Ownership Transfer
+    Transferring --> Active: Transfer Complete
+```
+
+### Lifecycle Sequence
+
 ```mermaid
 sequenceDiagram
     participant Agent

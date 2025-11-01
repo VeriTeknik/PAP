@@ -6,45 +6,89 @@ PAP is the control and telemetry backbone that connects Plugged.in's core contro
 
 ```mermaid
 graph TB
-    subgraph Station["🛸 Station (Plugged.in Core)"]
-        Registry[Registry]
-        Policy[Policy Engine]
-        Memory[Memory Service]
-        Control[Control Center]
+    subgraph Station["🛰️ The Station (Plugged.in Core)"]
+        Registry["Registry & Identity"]
+        Policy["Policy Engine"]
+        Memory["Memory Service"]
+        Control["Control Center"]
     end
 
-    subgraph Proxy["🔐 PAP Proxy (mcp.plugged.in)"]
-        Auth[mTLS Auth]
-        Router[Message Router]
-        Logger[Event Logger]
-        RateLimit[Rate Limiter]
+    subgraph Proxy["PAP Proxy (mcp.plugged.in)"]
+        Auth["🔐 mTLS Auth"]
+        Router["🔀 Message Router"]
+        Logger["📊 Telemetry Logger"]
+        RateLimit["⏱️ Rate Limiter"]
+        Sig["✍️ Signature Verify"]
     end
 
-    subgraph Agents["🚀 Autonomous Agents"]
-        Focus[Focus Agent<br/>focus.us-east.a.plugged.in]
-        Analytics[Analytics Agent<br/>analytics.eu.a.plugged.in]
-        Memory2[Memory Agent<br/>memory.us-west.a.plugged.in]
-        Edge[Edge Agent<br/>edge.asia.a.plugged.in]
+    subgraph Shuttles["🚀 Autonomous Agents (Shuttles)"]
+        Focus["Focus Agent<br/>{focus}.{cluster}.a.plugged.in"]
+        MemAgent["Memory Agent<br/>{memory}.{cluster}.a.plugged.in"]
+        Edge["Edge Agent<br/>{edge}.{cluster}.a.plugged.in"]
+        Custom["Custom Agent<br/>{custom}.{cluster}.a.plugged.in"]
     end
 
-    Station -->|Commands<br/>Kill Authority| Proxy
-    Proxy <-->|Heartbeat<br/>Metrics<br/>Events| Agents
+    Station <-->|Commands<br/>Telemetry| Proxy
+    Proxy <-->|invoke<br/>response<br/>event| Focus
+    Proxy <-->|invoke<br/>response<br/>event| MemAgent
+    Proxy <-->|invoke<br/>response<br/>event| Edge
+    Proxy <-->|invoke<br/>response<br/>event| Custom
 
-    Focus -.->|Invoke| Proxy
-    Proxy -.->|Route| Analytics
+    Focus -.->|heartbeat| Proxy
+    MemAgent -.->|heartbeat| Proxy
+    Edge -.->|heartbeat| Proxy
+    Custom -.->|heartbeat| Proxy
 
-    Station -->|"⚠️ FORCE KILL"| Focus
+    Control -.->|🔴 KILL| Proxy
 
-    classDef stationStyle fill:#e1f5ff,stroke:#0066cc,stroke-width:3px
-    classDef proxyStyle fill:#fff4e6,stroke:#ff9800,stroke-width:2px
-    classDef agentStyle fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
+    style Station fill:#1e3a8a,stroke:#3b82f6,color:#fff
+    style Proxy fill:#064e3b,stroke:#10b981,color:#fff
+    style Shuttles fill:#581c87,stroke:#a855f7,color:#fff
+    style Control fill:#7f1d1d,stroke:#ef4444,color:#fff
+```
 
-    class Station stationStyle
-    class Proxy proxyStyle
-    class Agents agentStyle
+## Message Flow
+
+```mermaid
+sequenceDiagram
+    participant Core as 🛰️ Station Core
+    participant Proxy as PAP Proxy
+    participant Agent as 🚀 Agent (Shuttle)
+
+    Note over Core,Agent: Provisioning Phase
+    Core->>Agent: Invite Token (JWT)
+    Agent->>Proxy: Authenticate + Register
+    Proxy->>Core: Validate Identity
+    Core->>Agent: Certificate + DNS ID
+
+    Note over Core,Agent: Operation Phase
+    loop Heartbeat (every 30s)
+        Agent-->>Proxy: HeartbeatEvent (mode, uptime)
+        Proxy-->>Core: Log Telemetry
+    end
+
+    Core->>Proxy: invoke Command
+    Proxy->>Agent: invoke (signed)
+    Agent->>Agent: Execute Task
+    Agent->>Proxy: response (result)
+    Proxy->>Core: response
+
+    Agent->>Proxy: event (metrics, logs)
+    Proxy->>Core: Store in Memory Service
+
+    Note over Core,Agent: Zombie Detection
+    Agent--xProxy: ❌ Heartbeat Missed
+    Proxy->>Core: 🚨 AGENT_UNHEALTHY
+    Core->>Proxy: terminate Command
+    Proxy->>Agent: Graceful Shutdown
+
+    Note over Core,Agent: Emergency Kill
+    Core->>Proxy: 🔴 force_kill
+    Proxy->>Agent: -9 Immediate Termination
 ```
 
 ## Repository Map
+
 - `docs/`: Human-readable specifications and architectural notes.
   - `overview.md`: Narrative overview of the mission, vision, and why PAP exists.
   - `rfc/pap-rfc-001.md`: Draft transport specification (handshake, message schema, lifecycle flows).
