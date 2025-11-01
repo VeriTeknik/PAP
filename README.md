@@ -22,10 +22,10 @@ graph TB
     end
 
     subgraph Shuttles["🚀 Autonomous Agents (Shuttles)"]
-        Focus["Focus Agent<br/>{focus}.{cluster}.a.plugged.in"]
-        MemAgent["Memory Agent<br/>{memory}.{cluster}.a.plugged.in"]
-        Edge["Edge Agent<br/>{edge}.{cluster}.a.plugged.in"]
-        Custom["Custom Agent<br/>{custom}.{cluster}.a.plugged.in"]
+        Focus["Focus Agent<br/>focus.cluster.a.plugged.in"]
+        MemAgent["Memory Agent<br/>memory.cluster.a.plugged.in"]
+        Edge["Edge Agent<br/>edge.cluster.a.plugged.in"]
+        Custom["Custom Agent<br/>custom.cluster.a.plugged.in"]
     end
 
     Station <-->|Commands<br/>Telemetry| Proxy

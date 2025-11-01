@@ -255,7 +255,7 @@ graph TD
     end
 
     subgraph Identity["🆔 Identity Layer"]
-        DNS[DNS-Based Addressing<br/>{agent}.{cluster}.a.plugged.in]
+        DNS["DNS-Based Addressing<br/>agent.cluster.a.plugged.in"]
         DNSSEC[DNSSEC Verification]
         JWT[JWT Onboarding Token]
     end
@@ -263,13 +263,13 @@ graph TD
     subgraph Integrity["✍️ Message Integrity"]
         Sig[Ed25519 Signatures]
         CRC[CRC Hash Verification]
-        Replay[Replay Protection<br/>Timestamp + Nonce]
+        Replay["Replay Protection<br/>Timestamp + Nonce"]
     end
 
     subgraph Audit["📋 Auditability"]
         Log[Event Logging]
-        Trace[OpenTelemetry<br/>trace_id + span_id]
-        Mem[Memory Service<br/>State Versioning]
+        Trace["OpenTelemetry<br/>trace_id + span_id"]
+        Mem["Memory Service<br/>State Versioning"]
     end
 
     TLS --> DNS
