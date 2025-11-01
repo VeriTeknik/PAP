@@ -101,6 +101,50 @@ Lightweight acknowledgement concluding the provisioning handshake.
 3. Satellite registers heartbeat interval and invokes initial sync.
 
 ### 7.2 Ownership Transfer
+
+The ownership transfer protocol enables secure agent migration between Stations with zero data loss:
+
+```mermaid
+sequenceDiagram
+    participant OldStation as Old Station
+    participant Agent
+    participant NewStation as New Station
+
+    Note over OldStation,NewStation: 📦 Phase 1: Transfer Initiation
+    OldStation->>NewStation: TRANSFER_INIT<br/>(agent_uuid, reason)
+    NewStation->>OldStation: TRANSFER_ACCEPT<br/>(temp_credentials)
+
+    Note over OldStation,NewStation: 📦 Phase 2: Dual Connection
+    Agent->>NewStation: Establish connection<br/>(using temp_credentials)
+    Note over Agent: Agent is now dual-homed
+
+    Note over OldStation,NewStation: 📦 Phase 3: State Snapshot
+    Agent->>Agent: Create state snapshot<br/>(memory, queue, config)
+
+    Note over OldStation,NewStation: 📦 Phase 4: State Transfer
+    loop Stream state chunks
+        Agent->>NewStation: StateChunk<br/>(signed, checksummed)
+        NewStation->>Agent: Ack
+    end
+
+    Note over OldStation,NewStation: 📦 Phase 5: Validation
+    NewStation->>NewStation: Verify state integrity
+    NewStation->>OldStation: STATE_RECEIVED<br/>(checksum_verified=true)
+
+    Note over OldStation,NewStation: 📦 Phase 6: Cutover
+    OldStation->>Agent: TRANSFER_COMMIT<br/>(disconnect_from_old)
+    Agent->>OldStation: Goodbye
+    NewStation->>Agent: ProvisionResponse<br/>(new_certificate)
+
+    Note over OldStation,NewStation: 📦 Phase 7: Cleanup
+    OldStation->>OldStation: Revoke old certificate
+    OldStation->>OldStation: Log transfer for audit
+
+    Note over OldStation,NewStation: ✅ Transfer Complete (<30s)
+```
+
+**Steps:**
+
 1. Current Station publishes transfer intent with time-bound authorization.
 2. Receiving Station validates agent state snapshot and accepts.
 3. Satellite re-handshakes using new Station endpoint; old credentials revoked.
@@ -151,7 +195,98 @@ Stations MUST reject handshakes lacking required capabilities for their policy d
 | `PROXY_ERROR` | 502 | Routing/connection issue. |
 | `VERSION_UNSUPPORTED` | 505 | Protocol version mismatch. |
 
+### Error Handling Flow
+
+```mermaid
+flowchart TD
+    Error[Error Occurred] --> Code{Error Code?}
+
+    Code -->|400-403<br/>BAD_REQUEST<br/>UNAUTHORIZED<br/>FORBIDDEN| NoRetry[❌ Don't Retry]
+    NoRetry --> Log1[Log Error]
+    Log1 --> Notify[Notify User]
+
+    Code -->|408 TIMEOUT| Retry1{Retry<br/>Count < 3?}
+    Retry1 -->|Yes| Backoff1[Exponential Backoff]
+    Backoff1 --> Retry[🔄 Retry Request]
+    Retry1 -->|No| Fail[Mark as Failed]
+
+    Code -->|429 RATE_LIMITED| Wait[Wait retry_after_ms]
+    Wait --> Retry
+
+    Code -->|480 AGENT_UNHEALTHY| CheckHealth[Check Agent Health]
+    CheckHealth --> Restart{Can Restart?}
+    Restart -->|Yes| RestartAgent[Restart Agent]
+    Restart -->|No| Reroute[Route to Backup Agent]
+
+    Code -->|481 AGENT_BUSY| LoadBalance[Load Balance to<br/>Another Instance]
+
+    Code -->|482 DEPENDENCY_FAILED| CheckDep[Check Dependency]
+    CheckDep --> DepOK{Dep Available?}
+    DepOK -->|Yes| Retry
+    DepOK -->|No| Circuit[Open Circuit Breaker]
+
+    Code -->|500-503<br/>INTERNAL_ERROR<br/>PROXY_ERROR| Retry2{Retry<br/>Count < 3?}
+    Retry2 -->|Yes| Backoff2[Exponential Backoff]
+    Backoff2 --> Retry
+    Retry2 -->|No| Fail
+
+    Code -->|505 VERSION_UNSUPPORTED| Upgrade[Upgrade Protocol<br/>Version]
+
+    RestartAgent --> Monitor[Monitor Recovery]
+    Reroute --> Monitor
+    LoadBalance --> Monitor
+    Fail --> Alert[Alert Operations]
+
+    style NoRetry fill:#ffccbc
+    style Retry fill:#c8e6c9
+    style Fail fill:#ff8a80
+    style Monitor fill:#b2dfdb
+```
+
 ## 11. Security Considerations
+
+PAP implements defense-in-depth security across multiple layers:
+
+```mermaid
+graph TB
+    subgraph Transport["🔒 Transport Layer"]
+        TLS[TLS 1.3+<br/>mTLS with<br/>client certs]
+        DNS[DNSSEC<br/>for identity<br/>verification]
+    end
+
+    subgraph Application["🔐 Application Layer"]
+        JWT[JWT onboarding<br/>token]
+        Sig[Ed25519<br/>message<br/>signatures]
+        CRC[SHA-256<br/>checksums]
+        Nonce[Anti-replay<br/>nonces]
+    end
+
+    subgraph Audit["📝 Audit Layer"]
+        Mem[Memory Service<br/>event storage]
+        Trace[OpenTelemetry<br/>distributed<br/>tracing]
+        Ver[Versioned<br/>history]
+    end
+
+    Message[PAP Message] --> TLS
+    TLS --> DNS
+    DNS --> JWT
+    JWT --> Sig
+    Sig --> CRC
+    CRC --> Nonce
+    Nonce --> Process[Process Message]
+
+    Process --> Mem
+    Process --> Trace
+    Process --> Ver
+
+    style TLS fill:#bbdefb
+    style JWT fill:#c5cae9
+    style Sig fill:#d1c4e9
+    style Mem fill:#f8bbd0
+```
+
+**Requirements:**
+
 1. All keys MUST rotate at least every 90 days.
 2. Replay protection achieved via nonce cache keyed by `message_id`. Entries expire after 15 minutes.
 3. Payloads larger than 10 MB MUST stream using chunked mode to prevent buffer exhaustion.
