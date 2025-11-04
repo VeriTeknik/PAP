@@ -1,6 +1,12 @@
 # Plugged.in Agent Protocol (PAP)
 
-PAP is the control and telemetry backbone that connects Plugged.in's core control plane (the Station) with autonomous agents (the Satellites). The protocol defines how agents authenticate, exchange commands, stream telemetry, negotiate lifecycle events, and remain accountable to centralized policy without losing their autonomy.
+**Version**: 1.0 (Paper-Aligned)
+**Status**: Stable Candidate
+**Last Updated**: November 4, 2025
+
+PAP is a comprehensive framework for autonomous agent lifecycle management, establishing Plugged.in as the central authority for creating, configuring, and controlling autonomous agents while enabling distributed operation through open protocols. The protocol addresses critical gaps in agent reliability, governance, and interoperability identified in production deployments.
+
+**"Autonomy without anarchy"** - Agents operate independently yet remain under organizational governance through protocol-level controls.
 
 ## Architecture Overview
 
@@ -47,6 +53,52 @@ graph TB
     style Control fill:#7f1d1d,stroke:#ef4444,color:#fff
 ```
 
+## Dual-Profile Architecture
+
+PAP v1.0 introduces two complementary profiles for control and data operations:
+
+### PAP-CP (Control Plane)
+- **Transport**: gRPC/HTTP/2 with TLS 1.3 + mTLS
+- **Wire Format**: Protocol Buffers v3
+- **Security**: Ed25519 signatures, nonce-based replay protection
+- **Use Cases**: Provisioning, lifecycle control, heartbeats, metrics, termination
+
+### PAP-Hooks (Open I/O)
+- **Transport**: JSON-RPC 2.0 over WebSocket/SSE
+- **Wire Format**: UTF-8 JSON
+- **Security**: OAuth 2.1 with JWT
+- **Use Cases**: Tool invocations, MCP access, A2A delegation, external APIs
+
+**Gateway Translation**: Gateways MAY translate between profiles for ecosystem interoperability.
+
+## Key Innovations
+
+### 1. Zombie-Prevention Superpower
+**Strict heartbeat/metrics separation** prevents control plane saturation:
+- **Heartbeats**: Liveness-only (mode, uptime). NO resource data.
+- **Metrics**: Separate channel for CPU, memory, custom gauges.
+- **Detection**: One missed interval → AGENT_UNHEALTHY (480)
+
+### 2. Normative Lifecycle States
+```
+NEW → PROVISIONED → ACTIVE ↔ DRAINING → TERMINATED
+                        ↓ (error)
+                      KILLED
+```
+Station holds exclusive kill authority.
+
+### 3. Protocol Interoperability
+- **MCP**: Native tool access via PAP-Hooks
+- **A2A**: Peer delegation and discovery
+- **Frameworks**: LangChain, CrewAI can adopt PAP for lifecycle management
+
+### 4. Comprehensive Security
+- Mutual TLS for PAP-CP
+- Ed25519 signatures on all control messages
+- OAuth 2.1 for PAP-Hooks
+- Automatic credential rotation (90 days)
+- Immutable audit trails
+
 ## Message Flow
 
 ```mermaid
@@ -89,23 +141,52 @@ sequenceDiagram
 
 ## Repository Map
 
-- `docs/`: Human-readable specifications and architectural notes.
-  - `overview.md`: Narrative overview of the mission, vision, and why PAP exists.
-  - `rfc/pap-rfc-001.md`: Draft transport specification (handshake, message schema, lifecycle flows).
-- `proto/`: Protocol Buffers definitions and related guidance.
-  - `pap/v1/pap.proto`: Initial wire schema for v1 messages.
-  - `README.md`: Instructions for working with protobuf tooling.
-- `sdk/`: Language-specific SDK plans and future implementations.
-  - `README.md`: Current goals, parity guidelines, and open tasks.
-- `proxy/`: PAP proxy and network edge notes.
-- `registry/`: Identity, policy, and capability management plans.
-- `ops/`: Operational runbooks, heartbeat thresholds, and SLO tracking.
+### Documentation (`docs/`)
+- **`overview.md`**: Mission, vision, dual-profile architecture, and protocol innovations
+- **`rfc/pap-rfc-001-v1.0.md`**: Complete PAP v1.0 specification (paper-aligned)
+- **`pap-hooks-spec.md`**: JSON-RPC 2.0 open I/O profile specification
+- **`service-registry.md`**: DNS-based agent discovery and capability advertisement
+- **`ownership-transfer.md`**: Agent migration protocol between Stations
+- **`deployment-guide.md`**: Kubernetes/Traefik reference deployment
 
-## Heartbeat Semantics
+### Protocol Definitions (`proto/`)
+- **`pap/v1/pap.proto`**: Protocol Buffers v3 schema with lifecycle messages
+  - PAP-CP messages: Provision, Invoke, Heartbeat, Metrics, Terminate, Transfer
+  - Strict heartbeat/metrics separation
+  - Lifecycle state definitions
 
-- Heartbeat is a liveness-only signal. It must never be used as a readiness gate for accepting work. Readiness should be determined by separate health checks or internal state transitions.
-- Default interval: 10s (configurable). Unhealthy threshold: 3 consecutive misses, triggering `AGENT_UNHEALTHY`.
-- Resource gauges (CPU, memory, custom) belong in heartbeat; business and performance metrics should be emitted separately as `event.metrics`.
+### SDKs (`sdk/`)
+- **TypeScript**: (Planned) PAP-CP and PAP-Hooks client libraries
+- **Python**: (Planned) PAP-CP and PAP-Hooks client libraries
+- **Rust**: (Planned) High-performance client libraries
+- **Go**: (Planned) Cloud-native client libraries
+
+### Services
+- **`proxy/`**: Gateway with PAP-CP ↔ PAP-Hooks translation
+- **`registry/`**: Service Registry for agent discovery
+- **`ops/`**: Operational runbooks and monitoring
+
+## Heartbeat vs. Metrics (Zombie Prevention)
+
+**CRITICAL**: PAP v1.0 enforces strict separation between heartbeats and metrics.
+
+### Heartbeat (Liveness Only)
+- **Purpose**: Zombie detection
+- **Payload**: Mode (EMERGENCY/IDLE/SLEEP), uptime_seconds
+- **Forbidden**: CPU, memory, or any resource data
+- **Intervals**:
+  - EMERGENCY: 5 seconds
+  - IDLE: 30 seconds (default)
+  - SLEEP: 15 minutes
+- **Detection**: One missed interval → AGENT_UNHEALTHY (480)
+
+### Metrics (Resource Telemetry)
+- **Purpose**: Monitoring and observability
+- **Payload**: cpu_percent, memory_mb, requests_handled, custom_metrics
+- **Channel**: Separate from heartbeats
+- **Frequency**: Independent (typically 60s)
+
+**Why This Matters**: Large telemetry payloads cannot starve the control path. This separation is PAP's "zombie-prevention superpower."
 
 ## DNS Topology
 
@@ -174,17 +255,55 @@ graph TB
 
 ## Getting Started
 
-1. Read `docs/overview.md` to understand the protocol vision.
-2. Dive into `docs/rfc/pap-rfc-001.md` for transport-level requirements, or the rev2.1-aligned spec at `docs/rfc/pap-rfc-001-rev2.1.md`.
-3. Generate language stubs from `proto/pap/v1/pap.proto` once SDK work begins.
+### 1. Understand the Protocol
+- Read `docs/overview.md` for mission, vision, and key innovations
+- Study `docs/rfc/pap-rfc-001-v1.0.md` for complete v1.0 specification
+- Review `docs/pap-hooks-spec.md` for open I/O profile
 
-### Observability & Tracing
+### 2. Explore the Wire Protocol
+- Examine `proto/pap/v1/pap.proto` for Protocol Buffers definitions
+- Understand dual-profile message structures
+- Review lifecycle state transitions
 
-- All messages should carry OpenTelemetry identifiers (`trace_id`, `span_id`) in the envelope for end-to-end correlation through the Proxy and Station.
-- The Proxy is responsible for emitting traces with these identifiers and linking to upstream/downstream spans.
+### 3. Deploy a Reference Agent
+- Follow `docs/deployment-guide.md` for Kubernetes deployment
+- Configure DNS delegation and wildcard certificates
+- Set up observability (Prometheus, Grafana)
 
-## Status
-This repository targets PAP-RFC-001 rev2.1 alignment. Specifications and schemas may evolve; see `VERSION` and `CHANGELOG.md` for updates.
+### 4. Build an SDK Client (Coming Soon)
+- Generate protobuf stubs: `protoc --proto_path=. --go_out=sdk/go proto/pap/v1/pap.proto`
+- Implement PAP-CP client with mTLS and Ed25519 signing
+- Implement PAP-Hooks client with OAuth 2.1 and WebSocket
+
+## Observability & Tracing
+
+- **OpenTelemetry**: All messages carry `trace_id` and `span_id` for distributed tracing
+- **Metrics**: Prometheus-format metrics for heartbeats, requests, errors, and circuit breakers
+- **Logging**: Structured JSON logs with trace context
+- **Audit Trail**: Immutable, append-only logs for all lifecycle events
+
+## Status and Roadmap
+
+### ✅ Completed (v1.0)
+- Dual-profile architecture (PAP-CP + PAP-Hooks)
+- Protocol Buffer schema with lifecycle messages
+- Strict heartbeat/metrics separation
+- Comprehensive specifications and documentation
+- Deployment reference (Kubernetes/Traefik)
+
+### 🔄 In Progress
+- SDK implementations (TypeScript, Python, Rust, Go)
+- Gateway with protocol translation
+- Station with provisioning and lifecycle management
+- Conformance test suite
+
+### 📋 Planned (v1.1+)
+- Multi-region active-active deployment
+- Federated identity with DIDs
+- Formal verification (TLA+)
+- Advanced policy DSL
+
+See `CHANGELOG.md` for detailed version history.
 
 ## Contributing
 Please open issues or drafts for changes to specs, schemas, or operational playbooks. Align proposal discussions with the RFC structure documented under `docs/rfc/`.

@@ -1,33 +1,128 @@
 # Plugged.in Agent Protocol (PAP) Overview
 
+**Version**: 1.0 (Paper-Aligned)
+**Last Updated**: November 4, 2025
+
 ## Mission
-PAP delivers a secure, auditable control channel between the Plugged.in Station and every autonomous Satellite. It merges infrastructure operations with agent cognition: lifecycle orchestration, telemetry, routing, and emergency authority live alongside fast bidirectional messaging.
+
+PAP establishes a comprehensive framework for autonomous agent lifecycle management, connecting Plugged.in's control plane (the Station) with autonomous agents (Satellites) while enabling distributed operation through open protocols. The protocol addresses critical gaps in agent reliability, governance, and interoperability identified in production deployments.
 
 ## Vision
-- **Autonomy without anarchy**: Satellites operate independently yet respect Station mandates for provisioning, policy, and termination.
-- **Infrastructure-grade accountability**: DNS-based identities, mutual TLS, signed payloads, and full telemetry archives.
-- **Lifecycle awareness**: Bootstrap, heartbeat, failover, migration, and kill flows are primitives, not afterthoughts.
 
-## Roles
-- **Station**: Authentication, routing, policy enforcement, kill authority.
-- **Satellite**: Mission execution, telemetry emission, self-healing, graceful exits.
-- **Proxy (mcp.plugged.in)**: Terminates TLS, validates signatures, enforces quota, forwards responses and events.
+**"Autonomy without anarchy"** - Agents operate independently with their own memory, tools, and decision-making capabilities, yet remain under organizational governance through protocol-level controls.
+
+### Key Innovations
+
+1. **Dual-Profile Architecture**: PAP-CP for ops-grade control; PAP-Hooks for vendor-neutral ecosystem integration
+2. **Zombie-Prevention Superpower**: Strict heartbeat/metrics separation prevents control plane saturation
+3. **Comprehensive Lifecycle Management**: Normative states with Station-held kill authority
+4. **Protocol Interoperability**: Native support for MCP tools and A2A peer communication
+
+## Architecture Overview
+
+### System Entities
+
+**Station** (Plugged.in Control Plane)
+- Provisions agents with credentials and configuration
+- Manages lifecycle states and transitions
+- Enforces policies and quotas
+- Maintains immutable audit logs
+- Holds exclusive termination authority
+
+**Agent** (Autonomous Executor)
+- Executes tasks independently
+- Maintains local state and context
+- Accesses tools via MCP servers
+- Communicates with peers via A2A
+- Reports liveness through heartbeats
+- Emits metrics separately from heartbeats
+
+**Gateway** (Protocol Mediator)
+- Translates between PAP-CP and PAP-Hooks
+- Enforces rate limits and quotas
+- Validates signatures and tokens
+- Maintains circuit breakers
+- Provides observability hooks
 
 ## Addressing & Topology
 - Identity: `{agent}.{cluster}.a.plugged.in`
 - Platform: Kubernetes (Rancher managed), Traefik ingress with wildcard certificates.
 - Telemetry: Routed through the Station for logging, alerting, and replay.
 
-## Message Families
-- `invoke`: Station or peer-issued commands.
-- `response`: Synchronous or asynchronous acknowledgments.
-- `event`: Telemetry, heartbeats, alerts, logs.
-- `error`: Structured fault reporting with standardized codes.
+## Dual-Profile Architecture
 
-## Guardrails
-- Continuous heartbeats with CPU/memory metrics prevent zombie processes.
-- Kill authority remains exclusive to the Station and requires signed control messages.
-- Ownership transfer preserves agent identity across Stations with replay protection.
+PAP v1.0 introduces two complementary profiles:
+
+### PAP-CP (Control Plane) Profile
+
+- **Transport**: gRPC over HTTP/2 with TLS 1.3
+- **Authentication**: Mutual TLS (mTLS) REQUIRED
+- **Wire Format**: Protocol Buffers v3
+- **Message Security**: Ed25519 signatures REQUIRED
+- **Replay Protection**: Nonce cache ≥60 seconds REQUIRED
+- **Use Cases**: Provisioning, lifecycle control, heartbeats, metrics, termination
+
+### PAP-Hooks (Open I/O) Profile
+
+- **Transport**: JSON-RPC 2.0 over WebSocket or HTTP SSE
+- **Authentication**: OAuth 2.1 with JWT RECOMMENDED
+- **Wire Format**: UTF-8 JSON with schema validation
+- **Message Security**: JOSE/JWT signing OPTIONAL
+- **Use Cases**: Tool invocations, MCP access, A2A delegation, external APIs
+
+**Gateway Translation**: Gateways MAY translate between profiles while preserving semantics.
+
+## Message Families
+
+### Control Plane Messages (PAP-CP)
+- **provision**: Agent provisioning with credentials and configuration
+- **invoke**: Station-issued control commands
+- **heartbeat**: Liveness-only signals (NO resource data)
+- **metrics**: Resource telemetry (CPU, memory, custom metrics)
+- **terminate**: Graceful shutdown requests
+- **transfer**: Ownership transfer between Stations
+
+### Open I/O Messages (PAP-Hooks)
+- **tool.invoke**: MCP server tool invocations
+- **a2a.delegate**: Agent-to-agent task delegation
+- **mcp.resource.read**: MCP resource access
+- **webhook**: External API calls
+
+## Zombie Prevention: The Superpower
+
+PAP's **strict heartbeat/metrics separation** is the key to reliable zombie detection:
+
+- **Heartbeats**: Liveness-only (mode, uptime). Lightweight, frequent, never blocked.
+- **Metrics**: Resource data (CPU, memory). Separate channel, independent frequency.
+- **Detection**: One missed heartbeat interval → AGENT_UNHEALTHY (480)
+
+This separation ensures large telemetry payloads cannot starve the control path, enabling aggressive zombie detection without false positives.
+
+## Lifecycle Management
+
+### Normative States
+
+```
+NEW → PROVISIONED → ACTIVE ↔ DRAINING → TERMINATED
+                        ↓ (error)
+                      KILLED
+```
+
+- **NEW**: Agent created, awaiting provisioning
+- **PROVISIONED**: Credentials issued, not yet operational
+- **ACTIVE**: Operational and handling requests
+- **DRAINING**: Graceful shutdown, completing tasks
+- **TERMINATED**: Clean shutdown completed
+- **KILLED**: Force-killed by Station (exclusive authority)
+
+## Security Guardrails
+
+- **Mutual TLS**: All PAP-CP connections authenticated with X.509 certificates
+- **Message Signing**: Ed25519 signatures on all control messages
+- **Replay Protection**: Nonce-based with ≥60 second cache retention
+- **Credential Rotation**: Automatic every 90 days, zero downtime
+- **Kill Authority**: Exclusively held by Station, requires signed control message
+- **Audit Trail**: Immutable, append-only logs for all lifecycle events
 
 ## Agent Lifecycle
 
@@ -140,10 +235,68 @@ flowchart TD
     style End fill:#e0e0e0
 ```
 
-## Roadmap Snapshot
+## Protocol Interoperability
 
-1. Finalize PAP-RFC-001 (transport, schema, lifecycle).
-2. Ship SDKs (TypeScript, Python, Rust, Go) with signing, retries, telemetry.
-3. Build PAP Proxy with mTLS, JWT onboarding, OpenTelemetry exports.
-4. Implement Registry & Policy service for capabilities and IAM-style controls.
-5. Provide deployment assets (Helm charts, manifests) for marketplace integration.
+### MCP (Model Context Protocol) Integration
+
+- **Resources** → Agent memory/state (PAP-CP)
+- **Tools** → Tool invocations (PAP-Hooks)
+- **Prompts** → Template library (PAP-Hooks)
+- **Servers** → Configured during provisioning
+
+### A2A (Agent-to-Agent) Integration
+
+- **Agent Cards** → Service Registry entries
+- **Task Delegation** → `a2a.delegate` method (PAP-Hooks)
+- **Task States** → Lifecycle states (PAP-CP)
+- **Peer Discovery** → DNS-based service discovery
+
+### Framework Compatibility
+
+PAP provides a protocol foundation that orchestration frameworks (LangChain, CrewAI, etc.) can adopt without abandoning their unique patterns. Frameworks gain lifecycle management, zombie prevention, and audit trails at the protocol level.
+
+## Roadmap and Status
+
+### Completed (v1.0)
+- ✅ Dual-profile architecture (PAP-CP + PAP-Hooks)
+- ✅ Protocol Buffer schema with lifecycle messages
+- ✅ Strict heartbeat/metrics separation
+- ✅ Normative lifecycle states and transitions
+- ✅ Ownership transfer protocol
+- ✅ Comprehensive error codebook
+- ✅ Service Registry schema
+- ✅ DNS-based addressing with DNSSEC
+- ✅ Deployment reference (Kubernetes/Traefik)
+
+### In Progress
+- 🔄 SDK implementations (TypeScript, Python, Rust, Go)
+- 🔄 Gateway with PAP-CP ↔ PAP-Hooks translation
+- 🔄 Station with provisioning and lifecycle management
+- 🔄 Conformance test suite
+
+### Planned (v1.1+)
+- 📋 Multi-region active-active Station deployment
+- 📋 Asynchronous state replication (CRDTs)
+- 📋 Federated identity with DIDs
+- 📋 Advanced policy DSL
+- 📋 Formal verification (TLA+)
+
+## References
+
+- **Main Specification**: `docs/rfc/pap-rfc-001-v1.0.md` - Complete PAP v1.0 specification
+- **PAP-Hooks Spec**: `docs/pap-hooks-spec.md` - JSON-RPC 2.0 open I/O profile
+- **Service Registry**: `docs/service-registry.md` - DNS-based agent discovery
+- **Ownership Transfer**: `docs/ownership-transfer.md` - Agent migration protocol
+- **Deployment Guide**: `docs/deployment-guide.md` - Kubernetes reference deployment
+- **Wire Schema**: `proto/pap/v1/pap.proto` - Protocol Buffers v1 definitions
+
+## Why PAP Matters
+
+Unlike MCP, ACP, and A2A which focus on tool invocation and orchestration logic, PAP defines the **physical and logical substrate** - how agents live, breathe, migrate, and die across infrastructure. It merges operational DevOps controls with cognitive AI design, providing:
+
+1. **Operational Reliability**: Protocol-level zombie prevention and health monitoring
+2. **Governance**: Audit trails, policy enforcement, and Station authority
+3. **Interoperability**: Native support for existing protocols (MCP, A2A)
+4. **Production-Ready**: Security, observability, and deployment patterns from day one
+
+PAP enables the **agent economy** by providing the infrastructure foundation that autonomous agents need to operate reliably at scale.
