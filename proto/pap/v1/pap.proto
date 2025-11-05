@@ -9,7 +9,43 @@ import "google/protobuf/timestamp.proto";
 
 // PAP defines a uniform envelope around commands, responses, telemetry,
 // and lifecycle directives exchanged between the Station and Satellites.
+// This schema supports both PAP-CP (Control Plane) and PAP-Hooks (Open I/O) profiles.
 
+// PAPMessage is the top-level message structure for PAP-CP (Control Plane) profile
+message PAPMessage {
+  Header header = 1;
+  oneof payload {
+    ProvisionRequest provision = 2;
+    ProvisionResponse provision_response = 3;
+    InvokeRequest invoke = 4;
+    InvokeResponse invoke_response = 5;
+    HeartbeatEvent heartbeat = 6;
+    MetricsReport metrics = 7;
+    TerminateRequest terminate = 8;
+    TerminateResponse terminate_response = 9;
+    TransferInit transfer_init = 10;
+    TransferAccept transfer_accept = 11;
+    TransferComplete transfer_complete = 12;
+    Error error = 13;
+  }
+  bytes signature = 15;  // Ed25519 signature (REQUIRED for PAP-CP)
+  bytes checksum = 16;   // SHA-256 checksum (REQUIRED for PAP-CP)
+}
+
+// Header contains routing, correlation, and security metadata
+message Header {
+  string version = 1;      // Protocol version, e.g. "pap-cp/1.0"
+  string agent_uuid = 2;   // Persistent agent identifier: "namespace/agent@v1.0"
+  string station_id = 3;   // Station identifier, e.g. "plugged.in"
+  string instance_id = 4;  // Per-process UUID
+  int64 timestamp = 5;     // Unix microseconds
+  bytes nonce = 6;         // 32-byte random for replay protection (REQUIRED)
+  string trace_id = 7;     // OpenTelemetry trace ID (16-byte hex)
+  string span_id = 8;      // OpenTelemetry span ID (8-byte hex)
+  string correlation_id = 9; // Optional correlation ID for request grouping
+}
+
+// MessageEnvelope (Legacy - maintained for backward compatibility)
 message MessageEnvelope {
   string message_id = 1;
   string parent_id = 2;
@@ -97,12 +133,31 @@ enum EventType {
   EVENT_TYPE_METRIC = 4;
 }
 
-message Heartbeat {
-  double cpu_percent = 1;
-  double memory_mb = 2;
-  double uptime_seconds = 3;
-  uint32 active_jobs = 4;
-  map<string, double> gauges = 5; // Custom health metrics
+// HeartbeatEvent - LIVENESS ONLY (Zombie Prevention)
+// CRITICAL: Heartbeats MUST carry only liveness information.
+// Resource telemetry (CPU, memory) MUST be sent via MetricsReport.
+message HeartbeatEvent {
+  Header header = 1;
+  HeartbeatMode mode = 2;      // Agent operational mode
+  uint64 uptime_seconds = 3;    // Process uptime in seconds
+  // NO OTHER FIELDS ALLOWED - This is the zombie-prevention superpower!
+}
+
+enum HeartbeatMode {
+  HEARTBEAT_MODE_UNSPECIFIED = 0;
+  EMERGENCY = 1;  // Critical state, heartbeat every 5s
+  IDLE = 2;       // Normal operation, heartbeat every 30s
+  SLEEP = 3;      // Low activity, heartbeat every 15min
+}
+
+// MetricsReport - Resource Telemetry (Separate from Liveness)
+// All resource metrics MUST be sent here, NOT in HeartbeatEvent
+message MetricsReport {
+  Header header = 1;
+  float cpu_percent = 2;        // CPU utilization percentage
+  uint64 memory_mb = 3;         // Memory usage in megabytes
+  uint64 requests_handled = 4;  // Number of requests processed
+  map<string, double> custom_metrics = 5; // Agent-specific metrics
 }
 
 message Log {
@@ -209,4 +264,103 @@ message CertificateBundle {
 message HandshakeAck {
   bool accepted = 1;
   string reason = 2;
+}
+
+// ============================================================================
+// PAP v1.0 Lifecycle Messages (Paper-Aligned)
+// ============================================================================
+
+// Lifecycle States
+enum LifecycleState {
+  LIFECYCLE_STATE_UNSPECIFIED = 0;
+  NEW = 1;           // Agent created but not provisioned
+  PROVISIONED = 2;   // Credentials issued, not yet active
+  ACTIVE = 3;        // Operational and handling requests
+  DRAINING = 4;      // Graceful shutdown in progress
+  TERMINATED = 5;    // Clean shutdown completed
+  KILLED = 6;        // Force-killed by Station
+}
+
+// Provisioning Flow Messages
+message ProvisionRequest {
+  string agent_uuid = 1;           // e.g. "namespace/research@v1.2"
+  Credentials credentials = 2;     // TLS cert and signing keys
+  AgentConfiguration configuration = 3; // MCP servers, models, policies
+}
+
+message Credentials {
+  string tls_cert = 1;             // PEM-encoded X.509 certificate
+  string signing_key_ref = 2;      // Reference to Ed25519 key (e.g. vault path)
+}
+
+message AgentConfiguration {
+  repeated string mcp_servers = 1;  // e.g. ["filesystem@v2.1", "web-search@v1.5"]
+  repeated string models = 2;       // e.g. ["gpt-4", "claude-3"]
+  MemoryConfiguration memory = 3;
+  map<string, string> policies = 4; // e.g. {"max_tokens": "100000", "timeout": "300"}
+}
+
+message MemoryConfiguration {
+  string type = 1;        // e.g. "vector", "graph"
+  string provider = 2;    // e.g. "pinecone", "weaviate"
+  map<string, string> config = 3;
+}
+
+message ProvisionResponse {
+  ErrorCode status = 1;
+  string instance_id = 2;          // Unique instance identifier
+  repeated string capabilities = 3; // e.g. ["a2a-0.3", "mcp-2025-06-18"]
+  string message = 4;
+}
+
+// Invoke Messages (Control Operations)
+message InvokeRequest {
+  Target target = 1;
+  string method = 2;
+  google.protobuf.Struct arguments = 3;
+  google.protobuf.Timestamp deadline = 4;
+  bool expect_reply = 5;
+  map<string, string> metadata = 6;
+}
+
+message InvokeResponse {
+  ErrorCode status = 1;
+  repeated Output outputs = 2;
+  map<string, string> metadata = 3;
+  bool is_final = 4;
+}
+
+// Termination Messages
+message TerminateRequest {
+  string agent_uuid = 1;
+  uint32 grace_period_seconds = 2; // Time allowed for graceful shutdown
+  string reason = 3;
+}
+
+message TerminateResponse {
+  ErrorCode status = 1;
+  string message = 2;
+  uint32 tasks_drained = 3;        // Number of tasks completed during drain
+}
+
+// Ownership Transfer Messages
+message TransferInit {
+  string agent_uuid = 1;            // e.g. "namespace/agent@v1.2"
+  string target_station = 2;        // e.g. "station-b.example.com"
+  bool preserve_state = 3;          // Whether to transfer agent state
+  google.protobuf.Timestamp initiated_at = 4;
+}
+
+message TransferAccept {
+  string agent_uuid = 1;
+  Credentials new_credentials = 2;  // New credentials from target station
+  string transfer_token = 3;        // Token authorizing the transfer
+}
+
+message TransferComplete {
+  string agent_uuid = 1;
+  string old_station = 2;           // e.g. "plugged.in"
+  string new_station = 3;           // e.g. "station-b.example.com"
+  bool keys_rotated = 4;            // Confirmation of credential rotation
+  google.protobuf.Timestamp completed_at = 5;
 }
