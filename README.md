@@ -1,12 +1,82 @@
 # Plugged.in Agent Protocol (PAP)
 
-**Version**: 1.0 (Paper-Aligned)
-**Status**: Stable Candidate
-**Last Updated**: November 4, 2025
+[![Version](https://img.shields.io/badge/version-1.0-blue.svg)](https://github.com/VeriTeknik/PAP/releases)
+[![Status](https://img.shields.io/badge/status-stable--candidate-green.svg)](https://github.com/VeriTeknik/PAP)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![Protocol](https://img.shields.io/badge/protocol-PAP--RFC--001--v1.0-orange.svg)](docs/rfc/pap-rfc-001-v1.0.md)
+
+**Version**: 1.0 (Paper-Aligned) | **Status**: Stable Candidate | **Last Updated**: November 4, 2025
 
 PAP is a comprehensive framework for autonomous agent lifecycle management, establishing Plugged.in as the central authority for creating, configuring, and controlling autonomous agents while enabling distributed operation through open protocols. The protocol addresses critical gaps in agent reliability, governance, and interoperability identified in production deployments.
 
-**"Autonomy without anarchy"** - Agents operate independently yet remain under organizational governance through protocol-level controls.
+> **"Autonomy without anarchy"** - Agents operate independently yet remain under organizational governance through protocol-level controls.
+
+---
+
+## Table of Contents
+
+- [Why PAP?](#why-pap)
+- [Features at a Glance](#features-at-a-glance)
+- [Architecture Overview](#architecture-overview)
+- [Dual-Profile Architecture](#dual-profile-architecture)
+- [Key Innovations](#key-innovations)
+- [Protocol Comparison](#protocol-comparison)
+- [Quick Examples](#quick-examples)
+- [Repository Map](#repository-map)
+- [Getting Started](#getting-started)
+- [Status and Roadmap](#status-and-roadmap)
+- [Contributing](#contributing)
+
+---
+
+## Why PAP?
+
+Unlike MCP, ACP, and A2A which focus on **tool invocation and orchestration logic**, PAP defines the **physical and logical substrate** - how agents live, breathe, migrate, and die across infrastructure. It merges operational DevOps controls with cognitive AI design.
+
+### The Problem
+
+Recent surveys show significant gaps in autonomous agent reliability:
+- **Silent failures ("zombies")**: Agents that appear alive but are unresponsive
+- **Uncontrolled loops**: Agents stuck in infinite reasoning cycles
+- **Tool fragility**: No standardized error handling or circuit breakers
+- **Governance gaps**: No audit trails, ownership transfer, or kill authority
+- **Protocol fragmentation**: Incompatible approaches to agent communication
+
+### The Solution
+
+PAP provides **protocol-level guarantees** for:
+1. **Operational Reliability**: Zombie prevention via heartbeat/metrics separation
+2. **Governance**: Audit trails, policy enforcement, Station authority
+3. **Interoperability**: Native support for MCP tools and A2A peer communication
+4. **Production-Ready**: Security, observability, and deployment patterns from day one
+
+### Based on Academic Research
+
+PAP v1.0 is aligned with comprehensive academic research on autonomous agent systems, addressing failure modes identified in:
+- Agent perception-reasoning-memory-action frameworks
+- Multi-agent coordination and lifecycle management
+- Security and trust in agentic AI systems
+
+See `docs/rfc/pap-rfc-001-v1.0.md` for complete specification and references.
+
+---
+
+## Features at a Glance
+
+| Feature | Description |
+|---------|-------------|
+| 🔄 **Dual Profiles** | PAP-CP (gRPC/mTLS) for control, PAP-Hooks (JSON-RPC/OAuth) for I/O |
+| 🧟 **Zombie Prevention** | Strict heartbeat/metrics separation - the superpower |
+| 🔄 **Lifecycle Management** | Normative states: NEW → PROVISIONED → ACTIVE → TERMINATED |
+| 🔐 **Security** | mTLS, Ed25519 signatures, OAuth 2.1, credential rotation |
+| 🌐 **DNS-Based Identity** | `{agent}.{region}.a.plugged.in` with DNSSEC |
+| 📊 **Observability** | OpenTelemetry traces, Prometheus metrics, structured logs |
+| 🔄 **Ownership Transfer** | Migrate agents between Stations with state preservation |
+| 🔌 **MCP Compatible** | Native tool access via PAP-Hooks |
+| 🤝 **A2A Compatible** | Peer delegation and discovery |
+| ☸️ **Cloud-Native** | Kubernetes/Traefik deployment reference |
+
+---
 
 ## Architecture Overview
 
@@ -98,6 +168,153 @@ Station holds exclusive kill authority.
 - OAuth 2.1 for PAP-Hooks
 - Automatic credential rotation (90 days)
 - Immutable audit trails
+
+---
+
+## Protocol Comparison
+
+| Aspect | PAP | MCP | A2A | Traditional Orchestration |
+|--------|-----|-----|-----|--------------------------|
+| **Focus** | Agent lifecycle & substrate | Tool invocation | Peer delegation | Workflow coordination |
+| **Zombie Prevention** | ✅ Built-in (heartbeat separation) | ❌ Not addressed | ❌ Not addressed | ⚠️ Application-level |
+| **Lifecycle States** | ✅ Normative (6 states) | ❌ Not specified | ⚠️ Task-level only | ⚠️ Framework-specific |
+| **Kill Authority** | ✅ Station-controlled | ❌ Not specified | ❌ Not specified | ⚠️ Manual intervention |
+| **Ownership Transfer** | ✅ Protocol-level | ❌ Not supported | ❌ Not supported | ❌ Not supported |
+| **Audit Trail** | ✅ Immutable logs | ⚠️ Implementation-dependent | ⚠️ Implementation-dependent | ⚠️ Framework-specific |
+| **Tool Access** | ✅ Via PAP-Hooks (MCP-compatible) | ✅ Native | ⚠️ Integration required | ⚠️ Framework-specific |
+| **Peer Communication** | ✅ Via PAP-Hooks (A2A-compatible) | ⚠️ Not native | ✅ Native | ⚠️ Framework-specific |
+| **Security Model** | ✅ mTLS + Ed25519 + OAuth 2.1 | ⚠️ Implementation-dependent | ⚠️ Implementation-dependent | ⚠️ Framework-specific |
+| **DNS-Based Identity** | ✅ Native with DNSSEC | ❌ Not specified | ❌ Not specified | ❌ Not specified |
+| **Multi-Region** | ✅ Planned (v1.1) | ⚠️ Implementation-dependent | ❌ Not specified | ⚠️ Framework-specific |
+
+**Key Insight**: PAP is **complementary** to MCP and A2A, not competitive. Agents use PAP for lifecycle management while leveraging MCP for tools and A2A for peer communication.
+
+---
+
+## Quick Examples
+
+### Heartbeat Message (PAP-CP)
+
+**Liveness-Only - No Resource Data!**
+
+```protobuf
+message HeartbeatEvent {
+  Header header = 1;                   // trace_id, nonce, timestamp
+  HeartbeatMode mode = 2;              // EMERGENCY, IDLE, or SLEEP
+  uint64 uptime_seconds = 3;           // 259200 (3 days)
+  // FORBIDDEN: cpu_percent, memory_mb
+}
+```
+
+**Example (Protocol Buffers binary over gRPC):**
+```
+header {
+  version: "pap-cp/1.0"
+  agent_uuid: "pluggedin/research@1.2.0"
+  station_id: "plugged.in"
+  instance_id: "inst-abc123"
+  timestamp: 1699000000
+  nonce: [32 random bytes]
+  trace_id: "trace-xyz"
+}
+mode: IDLE
+uptime_seconds: 259200
+signature: [Ed25519 signature]
+checksum: [SHA-256 hash]
+```
+
+### Metrics Report (Separate Channel)
+
+```protobuf
+message MetricsReport {
+  Header header = 1;
+  float cpu_percent = 2;               // 45.2
+  uint64 memory_mb = 3;                // 512
+  uint64 requests_handled = 4;         // 1543
+  map<string, double> custom_metrics = 5;
+}
+```
+
+### Tool Invocation (PAP-Hooks)
+
+**JSON-RPC 2.0 over WebSocket:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "req-12345",
+  "method": "tool.invoke",
+  "params": {
+    "tool": "web-search",
+    "arguments": {
+      "query": "quantum computing",
+      "limit": 10
+    },
+    "context": {
+      "agent_uuid": "pluggedin/research@1.2.0",
+      "trace_id": "trace-xyz",
+      "authorization": "Bearer eyJhbGc..."
+    }
+  }
+}
+```
+
+**Response:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "req-12345",
+  "result": {
+    "status": "success",
+    "data": {
+      "results": [
+        {
+          "title": "Quantum Computing Basics",
+          "url": "https://example.com/quantum"
+        }
+      ]
+    },
+    "metadata": {
+      "duration_ms": 120,
+      "cost": 0.001
+    }
+  }
+}
+```
+
+### Ownership Transfer
+
+```protobuf
+// Step 1: Initiate transfer
+TransferInit {
+  agent_uuid: "pluggedin/research@1.2.0"
+  target_station: "station-b.example.com"
+  preserve_state: true
+  initiated_at: 2025-11-04T12:34:56Z
+}
+
+// Step 2: Accept with new credentials
+TransferAccept {
+  agent_uuid: "pluggedin/research@1.2.0"
+  new_credentials: {
+    tls_cert: "-----BEGIN CERTIFICATE-----..."
+    signing_key_ref: "vault://keys/agent-new"
+  }
+  transfer_token: "token-xyz"
+}
+
+// Step 3: Complete transfer
+TransferComplete {
+  agent_uuid: "pluggedin/research@1.2.0"
+  old_station: "plugged.in"
+  new_station: "station-b.example.com"
+  keys_rotated: true
+  completed_at: 2025-11-04T12:36:56Z
+}
+```
+
+---
 
 ## Message Flow
 
@@ -306,9 +523,106 @@ graph TB
 See `CHANGELOG.md` for detailed version history.
 
 ## Contributing
-Please open issues or drafts for changes to specs, schemas, or operational playbooks. Align proposal discussions with the RFC structure documented under `docs/rfc/`.
 
-See `CODE_OF_CONDUCT.md` and `SECURITY.md` for governance and vulnerability reporting.
+We welcome contributions! Here's how you can help:
+
+### Reporting Issues
+- **Bug Reports**: Use GitHub Issues with the `bug` label
+- **Feature Requests**: Use GitHub Issues with the `enhancement` label
+- **Security Issues**: Follow `SECURITY.md` guidelines (private disclosure)
+
+### Contributing Code
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Make your changes following the coding standards
+4. Write tests and documentation
+5. Submit a pull request
+
+### RFC Process
+For protocol changes or new features:
+1. Create an RFC document in `docs/rfc/`
+2. Follow the template from existing RFCs
+3. Open a discussion issue
+4. Iterate based on community feedback
+5. Submit PR when consensus is reached
+
+See `CODE_OF_CONDUCT.md` for community guidelines.
+
+---
+
+## Community and Resources
+
+### Documentation
+- 📖 [Complete Specification](docs/rfc/pap-rfc-001-v1.0.md) - PAP v1.0 full spec
+- 🔌 [PAP-Hooks Spec](docs/pap-hooks-spec.md) - JSON-RPC 2.0 profile
+- 🌐 [Service Registry](docs/service-registry.md) - DNS-based discovery
+- 🔄 [Ownership Transfer](docs/ownership-transfer.md) - Agent migration
+- ☸️ [Deployment Guide](docs/deployment-guide.md) - Kubernetes reference
+
+### Academic References
+PAP v1.0 is based on research addressing autonomous agent failure modes:
+- V. de Lamo Castrillo et al., "Fundamentals of Building Autonomous LLM Agents," arXiv:2510.09244, 2025
+- Y. He et al., "Security of AI Agents," arXiv:2406.08689v2, 2024
+- H. Tran et al., "Multi-Agent Collaboration Mechanisms," arXiv:2501.06322, 2025
+
+### Related Projects
+- **MCP** ([modelcontextprotocol.io](https://modelcontextprotocol.io)) - Tool protocol for LLMs
+- **A2A** ([a2a-protocol.org](https://a2a-protocol.org)) - Agent-to-agent delegation
+- **OpenTelemetry** ([opentelemetry.io](https://opentelemetry.io)) - Observability standard
+
+### Support
+- 💬 GitHub Discussions for questions
+- 🐛 GitHub Issues for bug reports
+- 📧 Email: [Contact maintainers]
+
+---
 
 ## License
-PAP is released under the Apache 2.0 License. See `LICENSE` for the full text and patent grant.
+
+PAP is released under the **Apache 2.0 License**. See `LICENSE` for the full text and patent grant.
+
+### What this means:
+- ✅ Commercial use allowed
+- ✅ Modification allowed
+- ✅ Distribution allowed
+- ✅ Patent use (with grant)
+- ⚠️ Must include license and copyright notice
+- ⚠️ Must state changes made
+
+---
+
+## Citation
+
+If you use PAP in academic research, please cite:
+
+```bibtex
+@misc{pap2025,
+  title={The Plugged.in Agent Protocol (PAP): A Comprehensive Framework for Autonomous Agent Lifecycle Management},
+  author={Karaca, Cem},
+  year={2025},
+  publisher={VeriTeknik},
+  url={https://github.com/VeriTeknik/PAP}
+}
+```
+
+---
+
+## Acknowledgments
+
+PAP development was informed by:
+- Model Context Protocol (Anthropic)
+- Agent-to-Agent Protocol (Linux Foundation)
+- Research on autonomous agent systems and failure modes
+- Production deployments of LLM-based agents
+
+Special thanks to the agent framework communities (LangChain, CrewAI, AutoGPT) for demonstrating practical orchestration patterns.
+
+---
+
+<div align="center">
+
+**Built with ❤️ for the autonomous agent community**
+
+[Documentation](docs/) • [Specification](docs/rfc/pap-rfc-001-v1.0.md) • [Contributing](CONTRIBUTING.md) • [Code of Conduct](CODE_OF_CONDUCT.md)
+
+</div>
