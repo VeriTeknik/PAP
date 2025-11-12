@@ -1,15 +1,27 @@
 # Plugged.in Agent Protocol (PAP) Overview
 
-**Version**: 1.0 (Paper-Aligned)
-**Last Updated**: November 4, 2025
+**Protocol Version**: 1.0 (Paper-Aligned)
+**Paper Version**: Draft v0.3 (for arXiv cs.DC)
+**Last Updated**: November 12, 2025
 
 ## Mission
 
-PAP establishes a comprehensive framework for autonomous agent lifecycle management, connecting Plugged.in's control plane (the Station) with autonomous agents (Satellites) while enabling distributed operation through open protocols. The protocol addresses critical gaps in agent reliability, governance, and interoperability identified in production deployments.
+PAP establishes a comprehensive framework for autonomous agent lifecycle management, connecting Plugged.in's control plane (the Station) with autonomous agents (Satellites) while enabling distributed operation through open protocols. The protocol addresses critical gaps in agent reliability, governance, and interoperability identified in production deployments and academic research.
 
 ## Vision
 
 **"Autonomy without anarchy"** - Agents operate independently with their own memory, tools, and decision-making capabilities, yet remain under organizational governance through protocol-level controls.
+
+## Academic Foundation
+
+PAP v1.0 is based on the academic paper **"The Plugged.in Agent Protocol (PAP): A Comprehensive Framework for Autonomous Agent Lifecycle Management"** (Draft v0.3 for arXiv cs.DC) by Cem Karaca (VeriTeknik & Plugged.in). The protocol addresses systematic failures identified in recent surveys [1] showing significant gaps in autonomous agent reliability:
+
+- **Perception failures**: Controlled through provisioned MCP servers and tool policies
+- **Reasoning loops**: Detected via heartbeat monitoring and terminated by Station authority
+- **Memory corruption**: Prevented through versioned state management and audit trails
+- **Action safety**: Enforced via sandboxing and credential-based access control
+
+Recent surveys document gaps between human performance and state-of-the-art agents (OSWorld: humans >72% vs. models ~43% completion), stemming from missing ops-grade semantics: liveness detection, health monitoring, shutdown authority, auditability, and safe migration.
 
 ### Key Innovations
 
@@ -90,13 +102,36 @@ PAP v1.0 introduces two complementary profiles:
 
 ## Zombie Prevention: The Superpower
 
-PAP's **strict heartbeat/metrics separation** is the key to reliable zombie detection:
+PAP's **strict heartbeat/metrics separation** is the key to reliable zombie detection and addresses threat T2 (telemetry flooding to saturate control channels):
+
+### The Problem
+Traditional approaches mix liveness signals with resource telemetry, creating vulnerability:
+- Large telemetry payloads can starve the control path
+- False positives when agents are alive but telemetry is delayed
+- Self-DoS under high load when telemetry volume spikes
+
+### The Solution
+PAP enforces strict separation:
 
 - **Heartbeats**: Liveness-only (mode, uptime). Lightweight, frequent, never blocked.
+  - Payload: Mode (EMERGENCY/IDLE/SLEEP), uptime_seconds ONLY
+  - FORBIDDEN: CPU, memory, or any resource data
+  - Intervals: 5s (emergency), 30s (idle), 15min (sleep)
+
 - **Metrics**: Resource data (CPU, memory). Separate channel, independent frequency.
+  - Payload: cpu_percent, memory_mb, requests_handled, custom_metrics
+  - Channel: Completely separate from heartbeats
+  - Frequency: Independent (typically 60s)
+
 - **Detection**: One missed heartbeat interval → AGENT_UNHEALTHY (480)
 
-This separation ensures large telemetry payloads cannot starve the control path, enabling aggressive zombie detection without false positives.
+This separation ensures large telemetry payloads cannot starve the control path, enabling aggressive zombie detection without false positives—our **zombie-prevention superpower**.
+
+### Threat Mitigation
+This architecture mitigates key threats identified in the PAP threat model:
+- **T2 (Telemetry Flooding)**: Separate channels prevent saturation
+- **T4 (Induced Reasoning Loops)**: Rapid heartbeat detection enables quick termination
+- **T1 (Replay Attacks)**: Nonce-based replay protection on all control messages
 
 ## Lifecycle Management
 
@@ -283,12 +318,26 @@ PAP provides a protocol foundation that orchestration frameworks (LangChain, Cre
 
 ## References
 
+### Protocol Documentation
 - **Main Specification**: `docs/rfc/pap-rfc-001-v1.0.md` - Complete PAP v1.0 specification
 - **PAP-Hooks Spec**: `docs/pap-hooks-spec.md` - JSON-RPC 2.0 open I/O profile
 - **Service Registry**: `docs/service-registry.md` - DNS-based agent discovery
 - **Ownership Transfer**: `docs/ownership-transfer.md` - Agent migration protocol
 - **Deployment Guide**: `docs/deployment-guide.md` - Kubernetes reference deployment
-- **Wire Schema**: `proto/pap/v1/pap.proto` - Protocol Buffers v1 definitions
+- **Wire Schema**: `proto/pap/v1/pap.proto` - Protocol Buffers v3 definitions
+
+### Academic References
+
+**Complete bibliography available in `references.md`** with full citations, BibTeX entries, and summaries.
+
+**Key research areas** [1-11]:
+- Agent failure modes and lifecycle management
+- Multi-agent coordination and communication
+- Security, trust, and governance
+- Protocol specifications (MCP, A2A)
+- Framework interoperability
+
+For complete citations and detailed summaries, see `references.md`.
 
 ## Why PAP Matters
 

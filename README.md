@@ -1,13 +1,14 @@
 # Plugged.in Agent Protocol (PAP)
 
 [![Version](https://img.shields.io/badge/version-1.0-blue.svg)](https://github.com/VeriTeknik/PAP/releases)
+[![Paper](https://img.shields.io/badge/paper-v0.3%20(arXiv%20cs.DC)-red.svg)](https://github.com/VeriTeknik/PAP/blob/main/docs/rfc/pap-rfc-001-v1.0.md)
 [![Status](https://img.shields.io/badge/status-stable--candidate-green.svg)](https://github.com/VeriTeknik/PAP)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Protocol](https://img.shields.io/badge/protocol-PAP--RFC--001--v1.0-orange.svg)](docs/rfc/pap-rfc-001-v1.0.md)
 
-**Version**: 1.0 (Paper-Aligned) | **Status**: Stable Candidate | **Last Updated**: November 4, 2025
+**Protocol Version**: 1.0 (Paper-Aligned) | **Paper Version**: Draft v0.3 (for arXiv cs.DC) | **Status**: Stable Candidate | **Last Updated**: November 12, 2025
 
-PAP is a comprehensive framework for autonomous agent lifecycle management, establishing Plugged.in as the central authority for creating, configuring, and controlling autonomous agents while enabling distributed operation through open protocols. The protocol addresses critical gaps in agent reliability, governance, and interoperability identified in production deployments.
+PAP is a comprehensive framework for autonomous agent lifecycle management, establishing Plugged.in as the central authority for creating, configuring, and controlling autonomous agents while enabling distributed operation through open protocols. The protocol addresses critical gaps in agent reliability, governance, and interoperability identified in production deployments and academic research.
 
 > **"Autonomy without anarchy"** - Agents operate independently yet remain under organizational governance through protocol-level controls.
 
@@ -52,12 +53,20 @@ PAP provides **protocol-level guarantees** for:
 
 ### Based on Academic Research
 
-PAP v1.0 is aligned with comprehensive academic research on autonomous agent systems, addressing failure modes identified in:
-- Agent perception-reasoning-memory-action frameworks
-- Multi-agent coordination and lifecycle management
-- Security and trust in agentic AI systems
+PAP v1.0 is based on the academic paper **"The Plugged.in Agent Protocol (PAP): A Comprehensive Framework for Autonomous Agent Lifecycle Management"** (Draft v0.3 for arXiv cs.DC) by Cem Karaca. The protocol addresses failure modes identified in:
 
-See `docs/rfc/pap-rfc-001-v1.0.md` for complete specification and references.
+- **Perception-reasoning-memory-action frameworks** [1] - Recent surveys document gaps between human performance and state-of-the-art agents (OSWorld: humans >72% vs. models ~43%)
+- **Multi-agent coordination** [4,7] - Systematic failures in cascading errors when agents lack proper lifecycle management
+- **Agent security** [5,6] - Threat models and security requirements for autonomous agents
+- **Protocol interoperability** [2,3,9] - Integration with MCP, A2A, and existing frameworks
+
+**Key Research Contributions:**
+1. First comprehensive framework combining control plane authority with distributed agent autonomy
+2. Strict heartbeat/telemetry separation preventing self-DoS under load
+3. Normative lifecycle states with formal transition semantics
+4. Dual-profile architecture enabling both ops-grade control and open ecosystem integration
+
+See `docs/rfc/pap-rfc-001-v1.0.md` for complete specification and full academic references.
 
 ---
 
@@ -365,6 +374,8 @@ sequenceDiagram
 - **`service-registry.md`**: DNS-based agent discovery and capability advertisement
 - **`ownership-transfer.md`**: Agent migration protocol between Stations
 - **`deployment-guide.md`**: Kubernetes/Traefik reference deployment
+- **`evaluation-methodology.md`**: Performance targets, benchmarking, and chaos engineering
+- **`references.md`**: Consolidated academic and technical bibliography
 
 ### Protocol Definitions (`proto/`)
 - **`pap/v1/pap.proto`**: Protocol Buffers v3 schema with lifecycle messages
@@ -507,6 +518,7 @@ graph TB
 - Strict heartbeat/metrics separation
 - Comprehensive specifications and documentation
 - Deployment reference (Kubernetes/Traefik)
+- Academic paper (Draft v0.3 for arXiv cs.DC)
 
 ### 🔄 In Progress
 - SDK implementations (TypeScript, Python, Rust, Go)
@@ -519,6 +531,30 @@ graph TB
 - Federated identity with DIDs
 - Formal verification (TLA+)
 - Advanced policy DSL
+- Performance evaluation and benchmarking
+
+### 🎯 Evaluation Targets
+Based on the academic paper, PAP v1.0 is designed to achieve:
+
+**E1: Control Plane Latency**
+- Heartbeat round-trip: P50 <5ms, P99 <20ms
+- Control message processing: P50 <10ms, P99 <50ms
+- Measured under 1000 agent load
+
+**E2: Liveness Detection**
+- False positive rate: <0.1%
+- Detection latency: Within 1.5× configured interval
+- Recovery time from UNHEALTHY: <10 seconds
+
+**E3: Throughput**
+- Single gateway: 10,000+ requests/second
+- Horizontal scaling: Linear to 100,000+ requests/second
+- Circuit breaker activation: <100ms after threshold
+
+**E4: Ownership Transfer**
+- Transfer duration: <30 seconds including state snapshot
+- Credential rotation: Atomic with zero downtime
+- Post-transfer error rate: <0.01%
 
 See `CHANGELOG.md` for detailed version history.
 
@@ -560,10 +596,16 @@ See `CODE_OF_CONDUCT.md` for community guidelines.
 - ☸️ [Deployment Guide](docs/deployment-guide.md) - Kubernetes reference
 
 ### Academic References
-PAP v1.0 is based on research addressing autonomous agent failure modes:
-- V. de Lamo Castrillo et al., "Fundamentals of Building Autonomous LLM Agents," arXiv:2510.09244, 2025
-- Y. He et al., "Security of AI Agents," arXiv:2406.08689v2, 2024
-- H. Tran et al., "Multi-Agent Collaboration Mechanisms," arXiv:2501.06322, 2025
+
+**Complete citations are available in [`docs/references.md`](docs/references.md)** with BibTeX entries and detailed summaries.
+
+**Key papers**:
+- [1] de Lamo Castrillo et al., "Fundamentals of Building Autonomous LLM Agents" (arXiv:2510.09244)
+- [2] Anthropic, "Model Context Protocol Specification"
+- [3] Linux Foundation, "Agent-to-Agent Protocol (A2A) Specification v0.3"
+- [4-11] Multi-agent coordination, security, governance, and interoperability research
+
+See [`docs/references.md`](docs/references.md) for complete bibliography.
 
 ### Related Projects
 - **MCP** ([modelcontextprotocol.io](https://modelcontextprotocol.io)) - Tool protocol for LLMs
@@ -596,14 +638,19 @@ PAP is released under the **Apache 2.0 License**. See `LICENSE` for the full tex
 If you use PAP in academic research, please cite:
 
 ```bibtex
-@misc{pap2025,
+@misc{karaca2025pap,
   title={The Plugged.in Agent Protocol (PAP): A Comprehensive Framework for Autonomous Agent Lifecycle Management},
   author={Karaca, Cem},
   year={2025},
-  publisher={VeriTeknik},
-  url={https://github.com/VeriTeknik/PAP}
+  note={Draft v0.3 for arXiv cs.DC},
+  publisher={VeriTeknik \& Plugged.in},
+  url={https://github.com/VeriTeknik/PAP},
+  keywords={autonomous agents, control plane, lifecycle management, mTLS, OAuth 2.1, JSON-RPC, gRPC, Ed25519, audit, DNS, ownership transfer, heartbeat, telemetry, MCP, A2A, interoperability}
 }
 ```
+
+**Paper Reference:**
+Cem Karaca, "The Plugged.in Agent Protocol (PAP): A Comprehensive Framework for Autonomous Agent Lifecycle Management," Draft v0.3 for arXiv cs.DC, VeriTeknik & Plugged.in, November 2025.
 
 ---
 

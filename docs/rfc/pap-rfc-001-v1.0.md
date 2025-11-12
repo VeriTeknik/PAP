@@ -1,12 +1,16 @@
 # PAP-RFC-001 v1.0 — Plugged.in Agent Protocol
 
 **Status**: Stable Candidate
-**Version**: PAP v1.0 (Paper-Aligned)
+**Protocol Version**: PAP v1.0 (Paper-Aligned)
+**Paper Version**: Draft v0.3 (for arXiv cs.DC)
 **Revision**: 1.0
-**Date**: November 4, 2025
+**Date**: November 12, 2025
+**Author**: Cem Karaca (VeriTeknik & Plugged.in)
 **Audience**: Station developers, Agent implementers, Infrastructure teams
 
-This specification defines the Plugged.in Agent Protocol (PAP) v1.0, a comprehensive framework for autonomous agent lifecycle management. This version introduces the dual-profile architecture and aligns with the PAP academic paper.
+This specification defines the Plugged.in Agent Protocol (PAP) v1.0, a comprehensive framework for autonomous agent lifecycle management. This version introduces the dual-profile architecture and aligns with the PAP academic paper submitted for publication in arXiv cs.DC.
+
+**Academic Paper**: "The Plugged.in Agent Protocol (PAP): A Comprehensive Framework for Autonomous Agent Lifecycle Management" by Cem Karaca, Draft v0.3 for arXiv cs.DC, November 2025.
 
 ---
 
@@ -712,7 +716,122 @@ See `docs/deployment-guide.md` for:
 
 ---
 
-## 17. Future Extensions
+## 17. Evaluation and Benchmarking
+
+PAP v1.0 defines concrete performance targets and validation criteria for implementations. This section provides a summary; **complete evaluation methodology, benchmarking procedures, and chaos engineering scenarios are documented in `evaluation-methodology.md`**.
+
+### 17.1 Performance Targets (Summary)
+
+**E1: Control Plane Latency**
+- Heartbeat round-trip: P99 <20ms
+- Control message processing: P99 <50ms
+- Test conditions: 1,000 concurrent agents
+
+**E2: Liveness Detection**
+- False positive rate: <0.1%
+- Detection latency: Within 1.5× heartbeat interval
+- Recovery time: <10 seconds
+
+**E3: Throughput**
+- Single gateway: 10,000+ req/s sustained
+- Horizontal scaling: Linear to 100,000+ req/s
+- Circuit breaker: <100ms activation
+
+**E4: Ownership Transfer**
+- Total duration: <30 seconds
+- Zero downtime: No request drops
+- Post-transfer errors: <0.01%
+
+### 17.2 Validation Requirements
+
+Implementations **MUST** validate:
+
+1. **Security**: 100% mTLS coverage, signature verification, replay prevention
+2. **Audit**: Complete logging of all lifecycle events with tamper detection
+3. **Interoperability**: MCP tool invocation, A2A delegation, framework compatibility
+4. **Resilience**: Graceful degradation under chaos scenarios
+
+### 17.3 Benchmarking Guide
+
+**See `evaluation-methodology.md` for**:
+- Detailed test procedures and acceptance criteria
+- Load profiles (steady state, spike, gradual increase)
+- Chaos engineering scenarios
+- Reporting templates and metrics
+- Environment recommendations
+
+Implementers **SHOULD** run the standardized benchmark suite and publish results for transparency and comparison.
+
+---
+
+## 18. Limitations and Current Status
+
+### 18.1 Known Limitations
+
+**Single-Region Deployment**:
+- Current implementation targets single-region Station deployment
+- Multi-region active-active support planned for v1.1
+- Cross-region ownership transfer requires manual coordination
+
+**Synchronous State Transfer**:
+- Ownership transfer uses synchronous state snapshot
+- Large agent states may exceed 30-second target
+- Asynchronous replication with CRDTs planned for v1.1
+
+**Scalability Constraints**:
+- Single Station instance supports up to 10,000 concurrent agents
+- Horizontal Station scaling requires careful state partitioning
+- Global agent namespace coordination needed for federation
+
+**Protocol Versioning**:
+- Current version negotiation is binary (support or reject)
+- Graceful degradation for partial feature support not yet defined
+- Forward/backward compatibility requires careful schema evolution
+
+### 18.2 Implementation Status
+
+**✅ Completed**:
+- Protocol specification (PAP v1.0)
+- Wire format definition (Protocol Buffers v3)
+- Dual-profile architecture (PAP-CP + PAP-Hooks)
+- Security model (mTLS, Ed25519, OAuth 2.1)
+- Lifecycle state machine
+- Error codebook
+- DNS addressing scheme
+- Deployment reference (Kubernetes/Traefik)
+
+**🔄 In Progress**:
+- SDK implementations (TypeScript, Python, Rust, Go)
+- Gateway service with protocol translation
+- Station service with provisioning and lifecycle management
+- Conformance test suite
+
+**📋 Planned**:
+- Production hardening and performance tuning
+- Formal verification (TLA+)
+- Multi-region deployment patterns
+- Advanced policy DSL
+
+### 18.3 Open Research Questions
+
+**Agent State Management**:
+- Optimal state snapshot formats for large contexts
+- Incremental state transfer protocols
+- State compression and deduplication strategies
+
+**Federated Identity**:
+- DID integration for cross-Station trust
+- Verifiable credentials for agent capabilities
+- Trust anchors and root of trust establishment
+
+**Performance Optimization**:
+- Binary protocol alternatives to Protocol Buffers
+- Zero-copy message passing for high-throughput scenarios
+- Hardware acceleration for signature verification
+
+---
+
+## 19. Future Extensions
 
 **Planned for v1.1**:
 - Multi-region active-active Station deployment
@@ -729,29 +848,38 @@ See `docs/deployment-guide.md` for:
 
 ---
 
-## 18. References
+## 20. References
 
-### Protocol Specifications
-- [Model Context Protocol](https://modelcontextprotocol.io/specification/2025-06-18/)
-- [Agent-to-Agent Protocol v0.3](https://a2a-protocol.org/latest/specification/)
-- [JSON-RPC 2.0](https://www.jsonrpc.org/specification)
-- [OAuth 2.1 Draft](https://oauth.net/2.1/)
+**Complete academic and technical references are consolidated in `references.md`.**
 
-### Standards
-- [RFC 9110: HTTP Semantics](https://datatracker.ietf.org/doc/html/rfc9110)
-- [RFC 8446: TLS 1.3](https://datatracker.ietf.org/doc/html/rfc8446)
-- [RFC 8032: Ed25519 Signatures](https://datatracker.ietf.org/doc/html/rfc8032)
-- [OpenTelemetry Specification](https://opentelemetry.io/docs/specs/otel/)
+### Key References (Summary)
 
-### Research
-- V. de Lamo Castrillo et al., "Fundamentals of Building Autonomous LLM Agents," arXiv:2510.09244, 2025
-- Y. He et al., "Security of AI Agents," arXiv:2406.08689v2, 2024
+**Primary Academic Paper**:
+[0] C. Karaca, "The Plugged.in Agent Protocol (PAP): A Comprehensive Framework for Autonomous Agent Lifecycle Management," Draft v0.3 for arXiv cs.DC, November 2025.
+
+**Protocol Specifications**:
+- [1] Model Context Protocol (Anthropic, 2025)
+- [2] Agent-to-Agent Protocol v0.3 (Linux Foundation, 2025)
+- [3-4] JSON-RPC 2.0, OAuth 2.1
+
+**Standards**:
+- RFC 9110 (HTTP), RFC 8446 (TLS 1.3), RFC 8032 (Ed25519), RFC 2136 (DNS UPDATE)
+- OpenTelemetry Specification
+
+**Agent Research**:
+- [5] de Lamo Castrillo et al., "Fundamentals of Building Autonomous LLM Agents," arXiv:2510.09244, 2025
+- [6] Tran et al., "Multi-Agent Collaboration Mechanisms," arXiv:2501.06322, 2025
+- [7] He et al., "Security of AI Agents," arXiv:2406.08689v2, 2024
+- [8] Ding et al., "Multi-Agent Coordination," NeurIPS 2024
+- [9-11] Governance, security, and interoperability surveys
+
+**For complete citations, BibTeX entries, and detailed summaries, see `references.md`.**
 
 ---
 
 ## Changelog
 
-### v1.0 (November 4, 2025)
+### v1.0 (November 12, 2025)
 - Introduced dual-profile architecture (PAP-CP + PAP-Hooks)
 - Strict heartbeat/metrics separation (zombie-prevention superpower)
 - Normative lifecycle states (NEW → PROVISIONED → ACTIVE → TERMINATED)
@@ -770,6 +898,7 @@ See `docs/deployment-guide.md` for:
 
 **Document Version**: 1.0
 **Status**: Stable Candidate
-**Last Updated**: November 4, 2025
+**Last Updated**: November 12, 2025
 **Protocol Version**: PAP v1.0
-**Specification Repository**: https://github.com/pluggedin/pap-specification
+**Paper Version**: Draft v0.3 (for arXiv cs.DC)
+**Specification Repository**: https://github.com/VeriTeknik/PAP
