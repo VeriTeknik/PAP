@@ -4,9 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Version**: PAP v1.0 (Paper-Aligned)
+**Protocol Version**: PAP v1.0 (Paper-Aligned)
+**Paper Version**: Draft v0.3 (for arXiv cs.DC)
 **Status**: Stable Candidate
-**Last Updated**: November 4, 2025
+**Last Updated**: November 12, 2025
 
 PAP (Plugged.in Agent Protocol) is a comprehensive framework for autonomous agent lifecycle management, establishing Plugged.in as the central authority for creating, configuring, and controlling autonomous agents while enabling distributed operation through open protocols.
 
@@ -15,6 +16,8 @@ PAP (Plugged.in Agent Protocol) is a comprehensive framework for autonomous agen
 **Guiding Principle**: "Autonomy without anarchy" - agents run independently but the Station retains absolute oversight for provisioning, heartbeat supervision, ownership management, and emergency termination.
 
 **Why PAP Matters**: Unlike MCP, ACP, and A2A which focus on tool invocation and orchestration logic, PAP defines the physical and logical substrate - how agents live, breathe, migrate, and die across infrastructure. It merges operational DevOps controls with cognitive AI design.
+
+**Academic Foundation**: PAP v1.0 addresses critical gaps identified in recent agent failure mode surveys, including perception-reasoning-memory-action frameworks. The protocol provides ops-grade semantics for liveness detection, health monitoring, shutdown authority, auditability, and safe migration—addressing systematic failures in agent perception-reasoning loops with proper lifecycle management and authority controls.
 
 ## Key Innovations (v1.0)
 
@@ -299,6 +302,7 @@ Before deploying PAP implementations, verify:
 
 ## References
 
+### Protocol Documentation
 - **Main Specification**: `docs/rfc/pap-rfc-001-v1.0.md` - Complete PAP v1.0 specification (paper-aligned)
 - **PAP-Hooks Spec**: `docs/pap-hooks-spec.md` - JSON-RPC 2.0 open I/O profile
 - **Service Registry**: `docs/service-registry.md` - DNS-based agent discovery
@@ -307,13 +311,45 @@ Before deploying PAP implementations, verify:
 - **Vision Document**: `docs/overview.md` - Mission, vision, and architectural philosophy
 - **Wire Schema**: `proto/pap/v1/pap.proto` - Protocol Buffers v3 definitions
 
+### Academic References
+PAP v1.0 is based on research addressing autonomous agent failure modes and lifecycle management:
+
+[1] V. de Lamo Castrillo, H. K. Gidey, A. Lenz, and A. Knoll, "Fundamentals of Building Autonomous LLM Agents," arXiv:2510.09244, 2025.
+
+[2] Anthropic, "Model Context Protocol Specification," Available: https://modelcontextprotocol.io/specification/2025-06-18/, 2025.
+
+[3] Linux Foundation, "Agent-to-Agent Protocol (A2A) Specification v0.3," Available: https://a2a-protocol.org/latest/specification/, 2025.
+
+[4] H. Tran, et al., "Multi-Agent Collaboration Mechanisms: A Survey of LLMs," arXiv:2501.06322, 2025.
+
+[5] Y. He, et al., "Security of AI Agents," arXiv:2406.08689v2, 2024.
+
+[6] Y. Ding, et al., "Multi-Agent Coordination via Multi-Level Communication," Proceedings of NeurIPS 2024.
+
+[7] "MI9 - Agent Intelligence Protocol: Runtime Governance for Agentic AI Systems," arXiv:2508.03858v1, 2025.
+
+[8] "TRiSM for Agentic AI: Trust, Risk, and Security Management in LLM-based Multi-Agent Systems," arXiv:2506.04133v1, 2025.
+
+[9] "A Survey of Agent Interoperability Protocols: MCP, ACP, A2A, and ANP," arXiv:2505.02279v1, 2025.
+
 ## Current Status
 
-**Version**: PAP v1.0 (Paper-Aligned)
+**Protocol Version**: PAP v1.0 (Paper-Aligned)
+**Paper Version**: Draft v0.3 (for arXiv cs.DC)
 **Status**: Stable Candidate
 
-The repository now contains comprehensive specifications for PAP v1.0, including dual-profile architecture, strict heartbeat/metrics separation, normative lifecycle states, and deployment references.
+The repository now contains comprehensive specifications for PAP v1.0, including dual-profile architecture, strict heartbeat/metrics separation, normative lifecycle states, and deployment references. The protocol specification is aligned with the academic paper submitted for publication.
 
 **Key Achievement**: The zombie-prevention superpower via strict heartbeat/metrics separation is fully specified and ready for implementation.
 
+**Evaluation Targets**: The protocol is designed for:
+- Control plane latency: P50 <5ms, P99 <20ms
+- Liveness detection: <0.1% false positive rate
+- Throughput: 10,000+ requests/second per gateway
+- Ownership transfer: <30 seconds with zero downtime
+
 SDK implementations, Gateway service, and Station service are planned next. See roadmap above for details.
+
+## Paper Alignment
+
+This repository implements the protocol described in "The Plugged.in Agent Protocol (PAP): A Comprehensive Framework for Autonomous Agent Lifecycle Management" (Draft v0.3 for arXiv cs.DC) by Cem Karaca. All protocol specifications, message formats, and operational semantics align with the academic paper.
