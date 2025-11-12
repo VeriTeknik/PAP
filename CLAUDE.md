@@ -36,6 +36,8 @@ PAP (Plugged.in Agent Protocol) is a comprehensive framework for autonomous agen
 - **`service-registry.md`**: DNS-based agent discovery and capability advertisement
 - **`ownership-transfer.md`**: Agent migration protocol between Stations
 - **`deployment-guide.md`**: Kubernetes/Traefik reference deployment
+- **`evaluation-methodology.md`**: Performance targets, benchmarking, and chaos engineering
+- **`references.md`**: Consolidated academic and technical bibliography
 
 ### Protocol Definitions (`proto/`)
 - **`pap/v1/pap.proto`**: Protocol Buffers v3 schema with lifecycle messages
@@ -312,25 +314,15 @@ Before deploying PAP implementations, verify:
 - **Wire Schema**: `proto/pap/v1/pap.proto` - Protocol Buffers v3 definitions
 
 ### Academic References
-PAP v1.0 is based on research addressing autonomous agent failure modes and lifecycle management:
+PAP v1.0 is based on research addressing autonomous agent failure modes and lifecycle management. **Complete citations, BibTeX entries, and detailed summaries are available in `docs/references.md`.**
 
-[1] V. de Lamo Castrillo, H. K. Gidey, A. Lenz, and A. Knoll, "Fundamentals of Building Autonomous LLM Agents," arXiv:2510.09244, 2025.
-
-[2] Anthropic, "Model Context Protocol Specification," Available: https://modelcontextprotocol.io/specification/2025-06-18/, 2025.
-
-[3] Linux Foundation, "Agent-to-Agent Protocol (A2A) Specification v0.3," Available: https://a2a-protocol.org/latest/specification/, 2025.
-
-[4] H. Tran, et al., "Multi-Agent Collaboration Mechanisms: A Survey of LLMs," arXiv:2501.06322, 2025.
-
-[5] Y. He, et al., "Security of AI Agents," arXiv:2406.08689v2, 2024.
-
-[6] Y. Ding, et al., "Multi-Agent Coordination via Multi-Level Communication," Proceedings of NeurIPS 2024.
-
-[7] "MI9 - Agent Intelligence Protocol: Runtime Governance for Agentic AI Systems," arXiv:2508.03858v1, 2025.
-
-[8] "TRiSM for Agentic AI: Trust, Risk, and Security Management in LLM-based Multi-Agent Systems," arXiv:2506.04133v1, 2025.
-
-[9] "A Survey of Agent Interoperability Protocols: MCP, ACP, A2A, and ANP," arXiv:2505.02279v1, 2025.
+**Key papers** [1-11]:
+- Agent systems and failure modes (de Lamo Castrillo et al., 2025)
+- Multi-agent coordination (Tran et al., 2025; Ding et al., 2024)
+- Security and trust (He et al., 2024)
+- Protocol specifications (MCP, A2A)
+- Governance frameworks (MI9, TRiSM)
+- Interoperability surveys
 
 ## Current Status
 

@@ -716,89 +716,51 @@ See `docs/deployment-guide.md` for:
 
 ---
 
-## 17. Evaluation Methodology
+## 17. Evaluation and Benchmarking
 
-This section defines performance targets and evaluation criteria for PAP v1.0 implementations, as specified in the academic paper.
+PAP v1.0 defines concrete performance targets and validation criteria for implementations. This section provides a summary; **complete evaluation methodology, benchmarking procedures, and chaos engineering scenarios are documented in `evaluation-methodology.md`**.
 
-### 17.1 Performance Metrics
+### 17.1 Performance Targets (Summary)
 
-#### E1: Control Plane Latency
-**Target**: Sub-50ms P99 latency for control operations under load
+**E1: Control Plane Latency**
+- Heartbeat round-trip: P99 <20ms
+- Control message processing: P99 <50ms
+- Test conditions: 1,000 concurrent agents
 
-- **Heartbeat round-trip**: P50 <5ms, P99 <20ms
-- **Control message processing**: P50 <10ms, P99 <50ms
-- **Test conditions**: 1,000 concurrent agents, sustained load
-- **Measurement**: End-to-end from agent send to Station receive
+**E2: Liveness Detection**
+- False positive rate: <0.1%
+- Detection latency: Within 1.5× heartbeat interval
+- Recovery time: <10 seconds
 
-#### E2: Liveness Detection
-**Target**: <0.1% false positive rate with rapid detection
+**E3: Throughput**
+- Single gateway: 10,000+ req/s sustained
+- Horizontal scaling: Linear to 100,000+ req/s
+- Circuit breaker: <100ms activation
 
-- **False positive rate**: <0.1% (agents incorrectly marked unhealthy)
-- **Detection latency**: Within 1.5× configured heartbeat interval
-- **Recovery time from UNHEALTHY**: <10 seconds
-- **Test conditions**: Network jitter, partial failures, load spikes
+**E4: Ownership Transfer**
+- Total duration: <30 seconds
+- Zero downtime: No request drops
+- Post-transfer errors: <0.01%
 
-#### E3: Throughput
-**Target**: 10,000+ requests/second per gateway with linear scaling
+### 17.2 Validation Requirements
 
-- **Single gateway**: 10,000+ requests/second sustained
-- **Horizontal scaling**: Linear to 100,000+ requests/second
-- **Circuit breaker activation**: <100ms after error threshold
-- **Graceful degradation**: 99.9% availability under chaos testing
+Implementations **MUST** validate:
 
-#### E4: Ownership Transfer
-**Target**: <30 seconds with zero downtime
+1. **Security**: 100% mTLS coverage, signature verification, replay prevention
+2. **Audit**: Complete logging of all lifecycle events with tamper detection
+3. **Interoperability**: MCP tool invocation, A2A delegation, framework compatibility
+4. **Resilience**: Graceful degradation under chaos scenarios
 
-- **Transfer duration**: <30 seconds including state snapshot
-- **Credential rotation**: Atomic with zero service disruption
-- **Post-transfer error rate**: <0.01%
-- **State consistency**: 100% verification via checksums
+### 17.3 Benchmarking Guide
 
-### 17.2 Security Validation
+**See `evaluation-methodology.md` for**:
+- Detailed test procedures and acceptance criteria
+- Load profiles (steady state, spike, gradual increase)
+- Chaos engineering scenarios
+- Reporting templates and metrics
+- Environment recommendations
 
-#### Authentication Enforcement
-- **mTLS coverage**: 100% of PAP-CP connections
-- **Signature verification**: All control messages validated
-- **Replay attack prevention**: Zero successful replays in 10M attempts
-- **Token expiry enforcement**: 100% compliance
-
-#### Audit Completeness
-- **Control operation logging**: 100% of lifecycle events
-- **Tamper detection**: Immutable append-only logs
-- **Compliance reporting**: Real-time audit trail generation
-
-### 17.3 Interoperability Testing
-
-#### MCP Integration
-- ✓ Tool invocation via PAP-Hooks
-- ✓ Resource access patterns
-- ✓ 1000+ available MCP servers tested
-
-#### A2A Integration
-- ✓ Agent card discovery
-- ✓ Task delegation workflows
-- ✓ Linux Foundation reference implementation compatibility
-
-#### Framework Compatibility
-- ✓ LangChain/LangGraph orchestration patterns
-- ✓ CrewAI multi-agent workflows
-- ✓ AutoGPT autonomous operation
-
-### 17.4 Chaos Engineering
-
-**Scenarios**:
-- Network partitions and latency injection
-- Certificate expiration and rotation
-- Gateway failures and recovery
-- Agent process crashes
-- Database unavailability
-- DNS resolution failures
-
-**Success Criteria**:
-- No silent failures (all failures logged)
-- Graceful degradation to safe state
-- Automatic recovery within SLA (99.9% availability)
-- Zero data loss for committed operations
+Implementers **SHOULD** run the standardized benchmark suite and publish results for transparency and comparison.
 
 ---
 
@@ -888,41 +850,30 @@ This section defines performance targets and evaluation criteria for PAP v1.0 im
 
 ## 20. References
 
-### Academic Paper
-[0] C. Karaca, "The Plugged.in Agent Protocol (PAP): A Comprehensive Framework for Autonomous Agent Lifecycle Management," Draft v0.3 for arXiv cs.DC, VeriTeknik & Plugged.in, November 2025.
+**Complete academic and technical references are consolidated in `references.md`.**
 
-### Protocol Specifications
-[1] Anthropic, "Model Context Protocol Specification," Available: https://modelcontextprotocol.io/specification/2025-06-18/, 2025.
+### Key References (Summary)
 
-[2] Linux Foundation, "Agent-to-Agent Protocol (A2A) Specification v0.3," Available: https://a2a-protocol.org/latest/specification/, 2025.
+**Primary Academic Paper**:
+[0] C. Karaca, "The Plugged.in Agent Protocol (PAP): A Comprehensive Framework for Autonomous Agent Lifecycle Management," Draft v0.3 for arXiv cs.DC, November 2025.
 
-[3] [JSON-RPC 2.0 Specification](https://www.jsonrpc.org/specification)
+**Protocol Specifications**:
+- [1] Model Context Protocol (Anthropic, 2025)
+- [2] Agent-to-Agent Protocol v0.3 (Linux Foundation, 2025)
+- [3-4] JSON-RPC 2.0, OAuth 2.1
 
-[4] [OAuth 2.1 Draft](https://oauth.net/2.1/)
+**Standards**:
+- RFC 9110 (HTTP), RFC 8446 (TLS 1.3), RFC 8032 (Ed25519), RFC 2136 (DNS UPDATE)
+- OpenTelemetry Specification
 
-### Standards
-- [RFC 9110: HTTP Semantics](https://datatracker.ietf.org/doc/html/rfc9110)
-- [RFC 8446: TLS 1.3](https://datatracker.ietf.org/doc/html/rfc8446)
-- [RFC 8032: Ed25519 Signatures](https://datatracker.ietf.org/doc/html/rfc8032)
-- [RFC 2136: DNS UPDATE](https://datatracker.ietf.org/doc/html/rfc2136)
-- [OpenTelemetry Specification](https://opentelemetry.io/docs/specs/otel/)
+**Agent Research**:
+- [5] de Lamo Castrillo et al., "Fundamentals of Building Autonomous LLM Agents," arXiv:2510.09244, 2025
+- [6] Tran et al., "Multi-Agent Collaboration Mechanisms," arXiv:2501.06322, 2025
+- [7] He et al., "Security of AI Agents," arXiv:2406.08689v2, 2024
+- [8] Ding et al., "Multi-Agent Coordination," NeurIPS 2024
+- [9-11] Governance, security, and interoperability surveys
 
-### Agent Systems Research
-[5] V. de Lamo Castrillo, H. K. Gidey, A. Lenz, and A. Knoll, "Fundamentals of Building Autonomous LLM Agents," arXiv:2510.09244, 2025.
-
-[6] H. Tran, et al., "Multi-Agent Collaboration Mechanisms: A Survey of LLMs," arXiv:2501.06322, 2025.
-
-[7] Y. He, et al., "Security of AI Agents," arXiv:2406.08689v2, 2024.
-
-[8] Y. Ding, et al., "Multi-Agent Coordination via Multi-Level Communication," Proceedings of NeurIPS 2024.
-
-### Governance and Security
-[9] "MI9 - Agent Intelligence Protocol: Runtime Governance for Agentic AI Systems," arXiv:2508.03858v1, 2025.
-
-[10] "TRiSM for Agentic AI: Trust, Risk, and Security Management in LLM-based Multi-Agent Systems," arXiv:2506.04133v1, 2025.
-
-### Interoperability
-[11] "A Survey of Agent Interoperability Protocols: MCP, ACP, A2A, and ANP," arXiv:2505.02279v1, 2025.
+**For complete citations, BibTeX entries, and detailed summaries, see `references.md`.**
 
 ---
 

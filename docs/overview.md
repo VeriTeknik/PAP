@@ -327,25 +327,17 @@ PAP provides a protocol foundation that orchestration frameworks (LangChain, Cre
 - **Wire Schema**: `proto/pap/v1/pap.proto` - Protocol Buffers v3 definitions
 
 ### Academic References
-PAP v1.0 is based on research addressing autonomous agent failure modes:
 
-[1] V. de Lamo Castrillo, H. K. Gidey, A. Lenz, and A. Knoll, "Fundamentals of Building Autonomous LLM Agents," arXiv:2510.09244, 2025.
+**Complete bibliography available in `references.md`** with full citations, BibTeX entries, and summaries.
 
-[2] Anthropic, "Model Context Protocol Specification," Available: https://modelcontextprotocol.io/specification/2025-06-18/, 2025.
+**Key research areas** [1-11]:
+- Agent failure modes and lifecycle management
+- Multi-agent coordination and communication
+- Security, trust, and governance
+- Protocol specifications (MCP, A2A)
+- Framework interoperability
 
-[3] Linux Foundation, "Agent-to-Agent Protocol (A2A) Specification v0.3," Available: https://a2a-protocol.org/latest/specification/, 2025.
-
-[4] H. Tran, et al., "Multi-Agent Collaboration Mechanisms: A Survey of LLMs," arXiv:2501.06322, 2025.
-
-[5] Y. He, et al., "Security of AI Agents," arXiv:2406.08689v2, 2024.
-
-[6] Y. Ding, et al., "Multi-Agent Coordination via Multi-Level Communication," Proceedings of NeurIPS 2024.
-
-[7] "MI9 - Agent Intelligence Protocol: Runtime Governance for Agentic AI Systems," arXiv:2508.03858v1, 2025.
-
-[8] "TRiSM for Agentic AI: Trust, Risk, and Security Management in LLM-based Multi-Agent Systems," arXiv:2506.04133v1, 2025.
-
-[9] "A Survey of Agent Interoperability Protocols: MCP, ACP, A2A, and ANP," arXiv:2505.02279v1, 2025.
+For complete citations and detailed summaries, see `references.md`.
 
 ## Why PAP Matters
 
