@@ -6,6 +6,20 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Protocol](https://img.shields.io/badge/protocol-PAP--RFC--001--v1.0-orange.svg)](docs/rfc/pap-rfc-001-v1.0.md)
 
+Autonomy Without Anarchy™
+
+The protocol that turns AI agents from loose cannons into Starfleet officers.
+
+- Heartbeat & health monitoring  
+- Remote kill-switch & containment  
+- Ownership transfer (yes, you can sell your agent)  
+- mTLS identity + zero-trust  
+- Zero-touch provisioning (QR scan → claimed)  
+- Lifecycle telemetry (spawn → act → sleep → terminate)
+
+Because agents will have wings.  
+We’re just making sure they fly in formation.
+
 **Protocol Version**: 1.0 (Paper-Aligned) | **Paper Version**: Draft v0.3 (for arXiv cs.DC) | **Status**: Stable Candidate | **Last Updated**: November 12, 2025
 
 PAP is a comprehensive framework for autonomous agent lifecycle management, establishing Plugged.in as the central authority for creating, configuring, and controlling autonomous agents while enabling distributed operation through open protocols. The protocol addresses critical gaps in agent reliability, governance, and interoperability identified in production deployments and academic research.
