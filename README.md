@@ -1,5 +1,13 @@
 # Plugged.in Agent Protocol (PAP)
 
+> [!IMPORTANT]
+> **Project status (October 2026): open source, community-driven.**
+> plugged.in, the hosted service, is moving to a new, separately developed platform. After that move,
+> this repository will no longer run plugged.in. The code stays open source under its current license and
+> continues with open collaboration: issues, pull requests, forks and new maintainers are welcome, and
+> self-hosting remains supported. The cutover date will be announced here at least 60 days in advance.
+> [What this means](https://github.com/VeriTeknik/pluggedin-app/blob/main/PROJECT_STATUS.md)
+
 [![Version](https://img.shields.io/badge/version-1.0-blue.svg)](https://github.com/VeriTeknik/PAP/releases)
 [![Paper](https://img.shields.io/badge/paper-v0.3%20(arXiv%20cs.DC)-red.svg)](https://github.com/VeriTeknik/PAP/blob/main/docs/rfc/pap-rfc-001-v1.0.md)
 [![Status](https://img.shields.io/badge/status-stable--candidate-green.svg)](https://github.com/VeriTeknik/PAP)
